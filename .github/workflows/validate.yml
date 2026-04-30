@@ -2,7 +2,7 @@ name: Validate HTML
 
 on:
   push:
-    branches: [ilia, main]
+    branches: [Ilia, main]
   pull_request:
 
 jobs:
@@ -16,4 +16,3 @@ jobs:
 
       - name: Validate HTML
         run: html-validate index.html flashcards.html
-Ы
