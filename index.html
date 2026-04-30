@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Move — Your Friends & Neighbors S01E01</title>
+<div>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAFAF7;
+    --ink: oklch(0.16 0.01 270);
+    --muted: oklch(0.55 0.01 270);
+    --line: oklch(0.92 0 0);
+    --accent: oklch(0.55 0.18 25);
+    --know: oklch(0.55 0.13 155);
+  }
+  * { box-sizing: border-box; }
+  html, body, #root { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    font-family: 'Geist', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  button, a { font-family: inherit; }
+  a { color: inherit; text-decoration: none; }
+
+  .page {
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0 20px;
+  }
+  @media (min-width: 768px)  { .page { max-width: 640px; padding: 0 32px; } }
+  @media (min-width: 1200px) { .page { max-width: 720px; padding: 0 40px; } }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 0 10px;
+  }
+  .back {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500;
+    border: none; background: transparent; padding: 0; cursor: pointer;
+  }
+  .show-code {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500;
+  }
+  .show-code b { color: var(--ink); font-weight: 600; }
+
+  .hero { padding: 18px 0 20px; }
+  .hero h1 {
+    font-family: 'Geist', sans-serif;
+    font-weight: 600;
+    font-size: 30px;
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    margin: 0 0 10px;
+  }
+  .hero h1 .amp { color: var(--accent); font-weight: 400; }
+  .hero-meta {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-meta .dot {
+    width: 3px; height: 3px;
+    background: var(--muted);
+    border-radius: 50%;
+    opacity: 0.6;
+  }
+  @media (min-width: 768px)  { .hero h1 { font-size: 40px; } }
+  @media (min-width: 1200px) { .hero h1 { font-size: 48px; } }
+
+  .section-label {
+    display: flex; align-items: center; gap: 10px;
+    padding: 22px 0 10px;
+  }
+  .section-label .t {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500;
+  }
+  .section-label .line { flex: 1; height: 1px; background: var(--line); }
+
+  .deck-list { border-top: 1px solid var(--line); }
+  .deck-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--line);
+    color: inherit;
+    cursor: default;
+    opacity: 0.42;
+    transition: background 140ms ease;
+  }
+  .deck-row.active { cursor: pointer; opacity: 1; }
+  .deck-row.active:hover { background: rgba(0,0,0,0.02); }
+
+  .deck-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+  .deck-level {
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+  .deck-row.active .deck-level { color: var(--accent); }
+  .deck-title {
+    font-family: 'Geist', sans-serif;
+    font-size: 17px; font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+  }
+  .deck-meta {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    margin-top: 2px;
+  }
+  .deck-meta b { color: var(--ink); font-weight: 600; }
+
+  .deck-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; margin-left: 14px; }
+  .progress { width: 36px; height: 3px; background: var(--line); position: relative; }
+  .progress-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--know); }
+  .arrow { color: var(--muted); display: flex; }
+  .deck-row.active .arrow { color: var(--ink); }
+
+  @media (min-width: 768px) {
+    .deck-title { font-size: 19px; }
+    .progress { width: 56px; }
+  }
+  @media (min-width: 1200px) {
+    .deck-title { font-size: 20px; }
+    .progress { width: 72px; }
+  }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="Home.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+  ReactDOM.createRoot(document.getElementById('root')).render(<window.Home />);
+</script>
+</body>
+</html>
