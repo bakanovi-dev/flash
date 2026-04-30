@@ -1,0 +1,26 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/flash || git clone https://github.com/bakanovi-dev/flash.git /opt/flash
+            cd /opt/flash
+            git pull origin main
+            docker build -t flash .
+            docker stop flash 2>/dev/null || true
+            docker rm flash 2>/dev/null || true
+            docker run -d --name flash -p 80:80 --restart always flash
