@@ -2,7 +2,7 @@ name: Validate HTML
 
 on:
   push:
-    branches: [ilia, main]
+    branches: [Ilia, main]
   pull_request:
 
 jobs:
