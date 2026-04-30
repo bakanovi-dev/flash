@@ -16,4 +16,3 @@ jobs:
 
       - name: Validate HTML
         run: html-validate index.html flashcards.html
-Ы
