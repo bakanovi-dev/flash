@@ -1,6 +1,6 @@
 const { useState, useRef, useEffect } = React;
 
-function Flashcards() {
+function Flashcards({ onBack }) {
   const cards = window.WORD_DECK;
 
   const [idx, setIdx]           = useState(0);
@@ -123,7 +123,7 @@ function Flashcards() {
 
   useEffect(() => {
     function onKey(e) {
-      if (e.key === ' ')           { e.preventDefault(); flip(); }
+      if (e.key === ' ')               { e.preventDefault(); flip(); }
       else if (e.key === 'ArrowLeft')  flick('dontknow');
       else if (e.key === 'ArrowRight') flick('know');
       else if (e.key === 'z' || e.key === 'Z') handleUndo();
@@ -139,9 +139,9 @@ function Flashcards() {
       <div className="swipe-wash" ref={washRef} />
       <div className="app">
         <div className="header">
-          <button className="icon-btn" onClick={handleUndo} disabled={!hist.length} aria-label="Отменить">
-            <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
-              <path d="M5.5 6.5L2.5 9l3 2.5M2.5 9h7.5a4 4 0 010 8h-2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+          <button className="icon-btn" onClick={onBack} aria-label="На главную">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2 7h10M7 2L2 7l5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
           <div className="pos"><b>{posCur}</b> / {cards.length}</div>
