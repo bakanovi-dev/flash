@@ -40,7 +40,7 @@ function CardFaces({ card }) {
   return (
     <>
       <div className="face front">
-        <div className="word" ref={wordRef}>{card.en}</div>
+        <div className="word" ref={wordRef}>{formValue}</div>
         <div className="rule" />
         <div className="example">{card.example}</div>
       </div>
@@ -79,7 +79,14 @@ function CardFaces({ card }) {
 const STACK_DEPTH = 3;
 
 function Flashcards() {
-  const cards = useMemo(() => window.WORD_DECK, []);
+  const cards = useMemo(() => {
+    const arr = [...window.WORD_DECK];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, []);
 
   const [index,    setIndex]    = useState(0);
   const [flipped,  setFlipped]  = useState(false);
