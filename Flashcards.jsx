@@ -34,6 +34,8 @@ function CardFaces({ card }) {
   }, [card.en, card.forms]);
 
   const [v1, v2, v3] = card.forms;
+  const formIndex = card.formUsed.startsWith('V1') ? 0 : card.formUsed.startsWith('V2') ? 1 : 2;
+  const formValue = card.forms[formIndex];
 
   return (
     <>
@@ -45,11 +47,11 @@ function CardFaces({ card }) {
       <div className="face back">
         <div className="back-inner">
           <div className="forms" ref={formsRef}>
-            <span>{v1}</span>
+            <span className={formIndex === 0 ? 'active' : ''}>{v1}</span>
             <span className="dash">–</span>
-            <span>{v2}</span>
+            <span className={formIndex === 1 ? 'active' : ''}>{v2}</span>
             <span className="dash">–</span>
-            <span>{v3}</span>
+            <span className={formIndex === 2 ? 'active' : ''}>{v3}</span>
           </div>
           {card.allSame && (
             <div className="all-same">
@@ -58,14 +60,15 @@ function CardFaces({ card }) {
             </div>
           )}
           <dl className="meta">
-            <dt>V1</dt>
-            <dd><span className="v1-mono">{card.v1}</span></dd>
+            <dd className="form-used">{card.formUsed}</dd>
+            <dt>фраза</dt>
+            <dd className="example-back">{card.example}</dd>
             <dt>значение</dt>
             <dd className="ru-meaning">{card.ru}</dd>
             <dt>фильм</dt>
             <dd>{card.film}</dd>
-            <dt>персонаж</dt>
-            <dd>{card.character}</dd>
+            {card.character && <dt>персонаж</dt>}
+            {card.character && <dd>{card.character}</dd>}
           </dl>
         </div>
       </div>
