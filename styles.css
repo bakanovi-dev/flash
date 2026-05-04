@@ -151,7 +151,7 @@ a { color: inherit; text-decoration: none; }
 }
 .card {
   position: absolute; left: 0; right: 0; top: 0; bottom: 0;
-  transform-style: preserve-3d; will-change: transform, opacity;
+  transform-style: preserve-3d; will-change: transform;
   transition: transform 420ms cubic-bezier(.25,.7,.3,1), opacity 240ms ease;
 }
 .card.dragging { transition: none; }
@@ -190,16 +190,13 @@ a { color: inherit; text-decoration: none; }
   position: absolute; inset: 0;
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
   padding: 32px 28px; display: flex; flex-direction: column; justify-content: center;
-  transition: opacity 240ms ease, border-color 160ms ease;
   border: 1px solid var(--line);
 }
 .face.front { background: #fff; color: var(--ink); }
 .face.back {
   background: var(--back); color: #fff; transform: rotateY(180deg);
-  opacity: 0; border-color: rgba(250,250,247,0.10);
+  border-color: rgba(250,250,247,0.10);
 }
-.flipped .face.front { opacity: 0; }
-.flipped .face.back  { opacity: 1; }
 
 .word, .ru {
   font-family: 'Geist', sans-serif; font-weight: 500; line-height: 1.05;
@@ -207,10 +204,44 @@ a { color: inherit; text-decoration: none; }
   overflow-wrap: break-word; word-break: break-word; hyphens: auto; font-size: 52px;
 }
 .ru { font-size: 44px; line-height: 1.1; letter-spacing: -0.02em; color: #fff; }
-.rule      { height: 1px; background: var(--line); margin: 20px 0; }
-.rule-back { height: 1px; background: rgba(255,255,255,0.2); margin: 20px 0; }
+.rule    { height: 1px; background: var(--line); margin: 20px 0; }
 .example { font-size: 15px; line-height: 1.55; color: var(--muted); }
-.ru-ex   { font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.7); }
+
+/* Back face — irregular verb */
+.back-inner {
+  display: flex; flex-direction: column; gap: 16px; width: 100%;
+}
+.forms {
+  font-family: 'Geist', sans-serif; font-weight: 500;
+  font-size: 36px; line-height: 1.05; letter-spacing: -0.02em; color: #fff;
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.forms .dash { color: rgba(255,255,255,0.35); font-weight: 400; }
+.all-same {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: rgba(255,255,255,0.55); letter-spacing: 0.01em;
+}
+.all-same .dot {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: rgba(255,255,255,0.45); flex-shrink: 0;
+}
+.meta {
+  display: grid; grid-template-columns: auto 1fr;
+  gap: 7px 14px; margin: 0; font-size: 14px;
+  border-top: 1px solid rgba(255,255,255,0.12); padding-top: 14px;
+}
+.meta dt {
+  font-family: 'Geist Mono', monospace; font-size: 9px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(255,255,255,0.45); font-weight: 600;
+  padding-top: 3px; white-space: nowrap;
+}
+.meta dd { margin: 0; color: rgba(255,255,255,0.85); line-height: 1.4; }
+.v1-mono {
+  font-family: 'Geist Mono', monospace; font-size: 13px;
+  color: rgba(255,255,255,0.75);
+}
+.ru-meaning { color: #fff; font-weight: 500; }
 
 @media (min-width: 768px) {
   .word { font-size: 64px; } .ru { font-size: 54px; }

@@ -13,8 +13,8 @@ function autoFit(el, max, min) {
 }
 
 function CardFaces({ card }) {
-  const wordRef = useRef(null);
-  const ruRef   = useRef(null);
+  const wordRef  = useRef(null);
+  const formsRef = useRef(null);
 
   useEffect(() => {
     const fit = () => {
@@ -22,16 +22,18 @@ function CardFaces({ card }) {
         const max = parseFloat(getComputedStyle(wordRef.current).fontSize);
         autoFit(wordRef.current, max, Math.max(24, max * 0.5));
       }
-      if (ruRef.current) {
-        const max = parseFloat(getComputedStyle(ruRef.current).fontSize);
-        autoFit(ruRef.current, max, Math.max(22, max * 0.5));
+      if (formsRef.current) {
+        const max = parseFloat(getComputedStyle(formsRef.current).fontSize);
+        autoFit(formsRef.current, max, Math.max(18, max * 0.5));
       }
     };
     fit();
     const ro = new ResizeObserver(fit);
     if (wordRef.current?.parentElement) ro.observe(wordRef.current.parentElement);
     return () => ro.disconnect();
-  }, [card.en, card.ru]);
+  }, [card.en, card.forms]);
+
+  const [v1, v2, v3] = card.forms;
 
   return (
     <>
@@ -41,9 +43,31 @@ function CardFaces({ card }) {
         <div className="example">{card.example}</div>
       </div>
       <div className="face back">
-        <div className="ru" ref={ruRef}>{card.ru}</div>
-        <div className="rule-back" />
-        <div className="ru-ex">«{card.exampleRu}»</div>
+        <div className="back-inner">
+          <div className="forms" ref={formsRef}>
+            <span>{v1}</span>
+            <span className="dash">–</span>
+            <span>{v2}</span>
+            <span className="dash">–</span>
+            <span>{v3}</span>
+          </div>
+          {card.allSame && (
+            <div className="all-same">
+              <span className="dot" />
+              все три формы одинаковые
+            </div>
+          )}
+          <dl className="meta">
+            <dt>V1</dt>
+            <dd><span className="v1-mono">{card.v1}</span></dd>
+            <dt>значение</dt>
+            <dd className="ru-meaning">{card.ru}</dd>
+            <dt>фильм</dt>
+            <dd>{card.film}</dd>
+            <dt>персонаж</dt>
+            <dd>{card.character}</dd>
+          </dl>
+        </div>
       </div>
     </>
   );
