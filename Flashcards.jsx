@@ -36,6 +36,10 @@ function CardFaces({ card }) {
   const [v1, v2, v3] = card.forms;
   const formIndex = card.formUsed.startsWith('V1') ? 0 : card.formUsed.startsWith('V2') ? 1 : 2;
   const formValue = card.forms[formIndex];
+  const allSame   = v1 === v2 && v2 === v3;
+  const v2v3Same  = !allSame && v2 === v3;
+  const v1v2Same  = !allSame && v1 === v2;
+  const allDiff   = v1 !== v2 && v2 !== v3 && v1 !== v3;
 
   return (
     <>
@@ -53,10 +57,13 @@ function CardFaces({ card }) {
             <span className="dash">–</span>
             <span className={formIndex === 2 ? 'active' : ''}>{v3}</span>
           </div>
-          {card.allSame && (
+          {(allSame || v2v3Same || v1v2Same || allDiff) && (
             <div className="all-same">
               <span className="dot" />
-              все три формы одинаковые
+              {allSame  && 'все три формы одинаковые'}
+              {v2v3Same && 'V2 и V3 одинаковые'}
+              {v1v2Same && 'V1 и V2 одинаковые'}
+              {allDiff  && 'все три формы разные'}
             </div>
           )}
           <dl className="meta">
