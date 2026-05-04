@@ -8,14 +8,14 @@ window.DECKS = [
 
 // Структура карточки:
 //   front:  en (V1), example
-//   back:   forms [V1,V2,V3], allSame, v1, ru, film, character
+//   back:   forms [V1,V2,V3], allSame, formUsed ("V1"|"V2"|"V3"), ru, film, character
 window.WORD_DECK = [
   {
     en: "put",
     example: "Put some pressure on him.",
     forms: ["put", "put", "put"],
     allSame: true,
-    v1: "put",
+    formUsed: "V1 (Present / Base)",
     ru: "Надави на него",
     film: "The Godfather",
     character: "Майкл Корлеоне",
@@ -25,7 +25,7 @@ window.WORD_DECK = [
     example: "You put me in a difficult position.",
     forms: ["put", "put", "put"],
     allSame: true,
-    v1: "put",
+    formUsed: "V2 (Past)",
     ru: "Ты поставил меня в сложное положение",
     film: "The Dark Knight",
     character: "Джокер",
@@ -35,7 +35,7 @@ window.WORD_DECK = [
     example: "The plan is put on hold.",
     forms: ["put", "put", "put"],
     allSame: true,
-    v1: "put",
+    formUsed: "V3 (состояние)",
     ru: "План находится на паузе",
     film: "Mission: Impossible",
     character: "",
@@ -45,7 +45,7 @@ window.WORD_DECK = [
     example: "I have put a lot of thought into this.",
     forms: ["put", "put", "put"],
     allSame: true,
-    v1: "put",
+    formUsed: "V3 (Perfect)",
     ru: "Я хорошо это обдумал",
     film: "Inception",
     character: "Кобб",
@@ -55,7 +55,7 @@ window.WORD_DECK = [
     example: "The put conditions were unacceptable.",
     forms: ["put", "put", "put"],
     allSame: true,
-    v1: "put",
+    formUsed: "V3 (определение состояния)",
     ru: "Установленные условия были неприемлемы",
     film: "The Godfather",
     character: "",
