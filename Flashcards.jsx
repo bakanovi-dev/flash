@@ -31,7 +31,7 @@ function CardFaces({ card }) {
     const ro = new ResizeObserver(fit);
     if (wordRef.current?.parentElement) ro.observe(wordRef.current.parentElement);
     return () => ro.disconnect();
-  }, [card.en, card.forms]);
+  }, [card.forms]);
 
   const [v1, v2, v3] = card.forms;
   const formIndex = card.formUsed.startsWith('V1') ? 0 : card.formUsed.startsWith('V2') ? 1 : 2;
@@ -39,6 +39,7 @@ function CardFaces({ card }) {
   const allSame   = v1 === v2 && v2 === v3;
   const v2v3Same  = !allSame && v2 === v3;
   const v1v2Same  = !allSame && v1 === v2;
+  const v1v3Same  = !allSame && v1 === v3;
   const allDiff   = v1 !== v2 && v2 !== v3 && v1 !== v3;
 
   return (
@@ -57,12 +58,13 @@ function CardFaces({ card }) {
             <span className="dash">–</span>
             <span className={formIndex === 2 ? 'active' : ''}>{v3}</span>
           </div>
-          {(allSame || v2v3Same || v1v2Same || allDiff) && (
+          {(allSame || v2v3Same || v1v2Same || v1v3Same || allDiff) && (
             <div className="all-same">
               <span className="dot" />
               {allSame  && 'все три формы одинаковые'}
               {v2v3Same && 'V2 и V3 одинаковые'}
               {v1v2Same && 'V1 и V2 одинаковые'}
+              {v1v3Same && 'V1 и V3 одинаковые'}
               {allDiff  && 'все три формы разные'}
             </div>
           )}
@@ -87,12 +89,31 @@ const STACK_DEPTH = 3;
 
 function Flashcards() {
   const cards = useMemo(() => {
-    const arr = [...window.WORD_DECK];
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
+    const shuffle = (arr) => {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    };
+
+    // Group by verb (V1 form), shuffle within each group
+    const groups = {};
+    for (const card of window.WORD_DECK) {
+      const key = card.forms[0];
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(card);
     }
-    return arr;
+    const queues = shuffle(Object.values(groups).map(g => shuffle(g)));
+
+    // Interleave: one card from each verb in turn
+    const result = [];
+    while (queues.some(q => q.length > 0)) {
+      for (const queue of queues) {
+        if (queue.length > 0) result.push(queue.shift());
+      }
+    }
+    return result;
   }, []);
 
   const [index,    setIndex]    = useState(0);
