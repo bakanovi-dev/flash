@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Карточки — Your Friends & Neighbors S01E01</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAFAF7;
+    --ink: oklch(0.16 0.01 270);
+    --muted: oklch(0.55 0.01 270);
+    --line: oklch(0.92 0 0);
+    --accent: oklch(0.55 0.18 25);
+    --know: oklch(0.55 0.13 155);
+    --back: oklch(0.62 0.008 270);
+    --learn-wash: oklch(0.96 0.04 25);
+    --know-wash: oklch(0.96 0.04 155);
+  }
+  * { box-sizing: border-box; }
+  html, body, #root { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Geist', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; }
+
+  .app {
+    width: 100%; max-width: 560px;
+    height: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    padding: 0 20px;
+    position: relative;
+  }
+  @media (min-width: 768px)  { .app { max-width: 640px; padding: 0 32px; } }
+  @media (min-width: 1200px) { .app { max-width: 720px; padding: 0 40px; } }
+
+  .swipe-wash {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 200ms ease, background 200ms ease;
+    z-index: 0;
+  }
+
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 0 14px;
+    position: relative; z-index: 2;
+  }
+  .icon-btn {
+    width: 28px; height: 28px;
+    border: none; background: transparent;
+    display: grid; place-items: center;
+    cursor: pointer;
+    color: var(--ink); padding: 0;
+  }
+  .icon-btn:disabled { opacity: 0.25; cursor: default; }
+  .pos {
+    font-size: 12px; font-family: 'Geist Mono', ui-monospace, monospace;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+  .pos b { color: var(--ink); font-weight: 500; }
+
+  .card-area {
+    flex: 1;
+    position: relative;
+    padding: 12px 0 22px;
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+    min-height: 0;
+  }
+
+  /* Floating swipe counters — sit OUTSIDE the 3D-perspective stack so the
+     flipping/flying card can't punch through them in z-space */
+  .swipe-counters {
+    position: absolute;
+    top: 12px;
+    left: 0; right: 0;
+    height: 0;
+    pointer-events: none;
+    z-index: 200;
+  }
+
+  /* The stack viewport — gives perspective and clips bottom previews if needed */
+  .stack {
+    flex: 1;
+    position: relative;
+    perspective: 1600px;
+    min-height: 0;
+  }
+  /* Each card sits absolutely; transform composes stack offset + drag/flick */
+  .card {
+    position: absolute;
+    left: 0; right: 0;
+    top: 0; bottom: 0;
+    will-change: transform, opacity;
+    transition: transform 420ms cubic-bezier(.25,.7,.3,1), opacity 240ms ease;
+  }
+  .card.dragging { transition: none; }
+  .card.flicking { transition: transform 360ms cubic-bezier(.4,.2,.4,1), opacity 240ms ease; }
+  /* Prevent interaction on cards behind the top */
+  .card.behind { pointer-events: none; }
+  .card.top { cursor: pointer; touch-action: none; }
+
+  /* Faces stack on top of each other. Flip = cross-fade + brief scale.
+     No 3D, no perspective, no backface-visibility — bulletproof. */
+  .face {
+    position: absolute; inset: 0;
+    padding: 32px 28px;
+    display: flex; flex-direction: column;
+    border: 1px solid var(--line);
+    background: #fff;
+    transition: opacity 260ms ease, transform 260ms cubic-bezier(.4,0,.2,1);
+    transform-origin: center;
+  }
+  .face.front { color: var(--ink); }
+  .face.back {
+    background: var(--back);
+    color: #fff;
+    border-color: rgba(250,250,247,0.10);
+    overflow-y: auto;
+  }
+
+  /* default state: front visible, back hidden */
+  .face.front { opacity: 1; transform: scaleX(1); pointer-events: auto; z-index: 2; }
+  .face.back  { opacity: 0; transform: scaleX(0.85); pointer-events: none; z-index: 1; }
+
+  /* flipped state: back visible, front hidden */
+  .card.flipped .face.front { opacity: 0; transform: scaleX(0.85); pointer-events: none; z-index: 1; }
+  .card.flipped .face.back  { opacity: 1; transform: scaleX(1); pointer-events: auto; z-index: 2; }
+
+  .word {
+    font-family: 'Geist', sans-serif;
+    font-weight: 500;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-top: auto;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+    font-size: 52px;
+  }
+  .rule { height: 1px; background: var(--line); margin: 20px 0; }
+  .example { font-size: 15px; line-height: 1.55; color: var(--muted); }
+
+  /* ——— back side ——— */
+  .back-inner {
+    display: flex; flex-direction: column; gap: 18px;
+    height: 100%;
+    justify-content: center;
+  }
+  .forms {
+    display: flex; align-items: baseline;
+    gap: 14px;
+    font-family: 'Geist', sans-serif;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    line-height: 1;
+    color: #fff;
+    font-size: 40px;
+    flex-wrap: wrap;
+  }
+  .forms .dash {
+    color: rgba(255,255,255,0.45);
+    font-weight: 400;
+  }
+  .all-same {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.65);
+    display: inline-flex; align-items: center; gap: 8px;
+    align-self: flex-start;
+    padding: 6px 10px;
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 999px;
+  }
+  .all-same .dot { width: 5px; height: 5px; border-radius: 50%; background: #fff; opacity: 0.85; }
+  .meta {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    row-gap: 10px;
+    column-gap: 16px;
+    align-items: baseline;
+  }
+  .meta dt {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    font-weight: 600;
+    margin: 0;
+  }
+  .meta dd {
+    margin: 0;
+    font-family: 'Geist', sans-serif;
+    font-size: 18px; line-height: 1.25;
+    color: #fff;
+    letter-spacing: -0.01em;
+  }
+  .meta dd.ru-meaning { font-size: 22px; letter-spacing: -0.015em; }
+  .meta dd .v1-mono {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+
+  @media (min-width: 768px) {
+    .word { font-size: 64px; }
+    .face { padding: 44px 36px; }
+    .example { font-size: 16px; }
+    .forms { font-size: 48px; gap: 18px; }
+    .meta dd { font-size: 19px; }
+    .meta dd.ru-meaning { font-size: 24px; }
+  }
+  @media (min-width: 1200px) {
+    .word { font-size: 72px; }
+    .face { padding: 56px 44px; }
+    .example { font-size: 17px; }
+    .forms { font-size: 56px; }
+    .meta dd.ru-meaning { font-size: 26px; }
+  }
+
+  /* Floating swipe counters — styles for the children themselves */
+  .swipe-count {
+    position: absolute;
+    top: 18px;
+    transform-origin: left center;
+    font-family: 'Geist', sans-serif;
+    font-weight: 600;
+    font-size: 32px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    display: flex; align-items: baseline; gap: 8px;
+    transition: opacity 160ms ease, transform 160ms ease;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.6);
+  }
+  .swipe-count.learn { left: 22px; }
+  .swipe-count.know  { right: 22px; transform-origin: right center; }
+  .swipe-count.learn { color: var(--accent); }
+  .swipe-count.know  { color: var(--know); }
+  .swipe-count .lbl {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    opacity: 0.75;
+  }
+  @media (min-width: 768px) {
+    .swipe-count { font-size: 38px; top: 24px; }
+    .swipe-count.learn { left: 32px; }
+    .swipe-count.know  { right: 32px; }
+  }
+
+  .actions {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    padding-top: 16px;
+    padding-bottom: 10px;
+    margin-top: -10px;
+  }
+  .action-btn {
+    appearance: none;
+    padding: 14px 16px;
+    background: #fff;
+    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .action-btn.learn { border: 1px solid var(--accent); color: var(--accent); }
+  .action-btn.know { border: 1px solid var(--know); color: var(--know); }
+  .arrow {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 14px; line-height: 1; opacity: 0.9;
+  }
+  .count {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 13px; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  .action-btn.learn .count {
+    color: var(--accent);
+    padding-left: 8px; margin-left: 4px;
+    border-left: 1px solid oklch(0.55 0.18 25 / 0.3);
+  }
+  .action-btn.know .count {
+    color: var(--know);
+    padding-right: 8px; margin-right: 4px;
+    border-right: 1px solid oklch(0.55 0.13 155 / 0.3);
+  }
+
+  @media (min-width: 768px) {
+    .action-btn { padding: 18px 22px; font-size: 13px; }
+    .actions { gap: 14px; padding-top: 22px; }
+  }
+
+  .done {
+    position: absolute; inset: 0;
+    display: flex;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 16px;
+    z-index: 3;
+    background: var(--bg);
+  }
+  .done .label {
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+  .done h2 {
+    font-size: 36px; font-weight: 500; letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .done .stats { display: flex; gap: 32px; margin-top: 8px; font-size: 13px; color: var(--muted); font-family: 'Geist Mono', monospace; }
+  .done .stats span { display: block; font-size: 28px; font-weight: 500; font-family: 'Geist', sans-serif; }
+  .done .stats .know-num span { color: var(--know); }
+  .done .stats .learn-num span { color: var(--accent); }
+  .done .reset {
+    margin-top: 16px;
+    padding: 10px 20px;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    cursor: pointer; font-weight: 500;
+  }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="data.js"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+</head>
+<body>
+
+<div class="swipe-wash" id="swipe-wash"></div>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "stackDepth": 3,
+  "stackOffset": 12,
+  "stackScale": 4,
+  "stackOpacity": 70,
+  "showShadow": true,
+  "flickDuration": 360
+}/*EDITMODE-END*/;
+
+function autoFit(el, max, min) {
+  if (!el) return;
+  const parent = el.parentElement;
+  if (!parent) return;
+  let s = max;
+  el.style.fontSize = s + 'px';
+  while (s > min && el.scrollWidth > parent.clientWidth) {
+    s -= 2;
+    el.style.fontSize = s + 'px';
+  }
+}
+
+// Card face content. Stable, used for top + behind cards.
+function CardFaces({ card }) {
+  const wordRef = useRef(null);
+  const formsRef = useRef(null);
+  useEffect(() => {
+    const fit = () => {
+      if (wordRef.current) {
+        const max = parseFloat(getComputedStyle(wordRef.current).fontSize);
+        autoFit(wordRef.current, max, Math.max(24, max * 0.5));
+      }
+      if (formsRef.current) {
+        const max = parseFloat(getComputedStyle(formsRef.current).fontSize);
+        autoFit(formsRef.current, max, Math.max(22, max * 0.5));
+      }
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    if (wordRef.current?.parentElement) ro.observe(wordRef.current.parentElement);
+    return () => ro.disconnect();
+  }, [card.en, card.forms?.join('-')]);
+
+  const [v1, v2, v3] = card.forms || [card.en, card.en, card.en];
+
+  return (
+    <>
+      <div className="face front">
+        <div className="word" ref={wordRef}>{card.en}</div>
+        <div className="rule"></div>
+        <div className="example">{card.example}</div>
+      </div>
+      <div className="face back">
+        <div className="back-inner">
+          <div className="forms" ref={formsRef}>
+            <span>{v1}</span>
+            <span className="dash">–</span>
+            <span>{v2}</span>
+            <span className="dash">–</span>
+            <span>{v3}</span>
+          </div>
+          {card.allSame && (
+            <div className="all-same">
+              <span className="dot"></span>
+              все три формы одинаковые
+            </div>
+          )}
+          <dl className="meta">
+            <dt>V1</dt>
+            <dd><span className="v1-mono">{card.v1}</span></dd>
+            <dt>значение</dt>
+            <dd className="ru-meaning">{card.ru}</dd>
+            <dt>фильм</dt>
+            <dd>{card.film}</dd>
+            <dt>персонаж</dt>
+            <dd>{card.character}</dd>
+          </dl>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  const cards = useMemo(() => window.WORD_DECK.slice(0, 24), []);
+  const [index, setIndex] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [drag, setDrag] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [flick, setFlick] = useState(null); // null | { dir: 1|-1 }
+  const [known, setKnown] = useState(0);
+  const [unknown, setUnknown] = useState(0);
+  const historyRef = useRef([]);
+  const dragStateRef = useRef({ id: null, startX: 0, moved: false });
+  const cardAreaRef = useRef(null);
+  const washRef = useRef(null);
+
+  const total = cards.length;
+  const isDone = index >= total;
+  const cur = cards[index];
+
+  // Wash effect — fixed bg overlay
+  useEffect(() => {
+    const wash = document.getElementById('swipe-wash');
+    if (!wash) return;
+    const x = drag;
+    const i = Math.min(Math.abs(x) / 60, 1);
+    wash.style.opacity = String(i * 0.95);
+    wash.style.background = x > 0 ? 'var(--know-wash)' : 'var(--learn-wash)';
+  }, [drag]);
+
+  const flipTop = useCallback(() => {
+    if (dragging) return;
+    if (Math.abs(drag) > 4) return;
+    setFlipped((f) => !f);
+  }, [dragging, drag]);
+
+  const advance = useCallback((action) => {
+    historyRef.current.push({ index, action, flipped });
+    if (action === 'know') setKnown((k) => k + 1);
+    else setUnknown((u) => u + 1);
+    setIndex((i) => i + 1);
+    setFlipped(false);
+    setDrag(0);
+    setFlick(null);
+  }, [index, flipped]);
+
+  const doFlick = useCallback((action) => {
+    if (flick || isDone) return;
+    const dir = action === 'know' ? 1 : -1;
+    setFlick({ dir });
+    const dur = t.flickDuration;
+    setTimeout(() => advance(action), dur - 40);
+  }, [flick, isDone, advance, t.flickDuration]);
+
+  const undo = useCallback(() => {
+    if (!historyRef.current.length) return;
+    const last = historyRef.current.pop();
+    if (last.action === 'know') setKnown((k) => Math.max(0, k - 1));
+    else setUnknown((u) => Math.max(0, u - 1));
+    setIndex(last.index);
+    setFlipped(false);
+    setDrag(0);
+    setFlick(null);
+  }, []);
+
+  const reset = useCallback(() => {
+    historyRef.current = [];
+    setIndex(0); setKnown(0); setUnknown(0);
+    setFlipped(false); setDrag(0); setFlick(null);
+  }, []);
+
+  // Keyboard
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === ' ') { e.preventDefault(); flipTop(); }
+      else if (e.key === 'ArrowLeft') doFlick('dontknow');
+      else if (e.key === 'ArrowRight') doFlick('know');
+      else if (e.key === 'z' || e.key === 'Z') undo();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [flipTop, doFlick, undo]);
+
+  // Pointer drag handlers (attached to top card)
+  const onPointerDown = (e) => {
+    if (e.target.closest('.action-btn')) return;
+    if (flick) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStateRef.current = { id: e.pointerId, startX: e.clientX, moved: false };
+    setDragging(false);
+    setDrag(0);
+  };
+  const onPointerMove = (e) => {
+    const ds = dragStateRef.current;
+    if (ds.id !== e.pointerId) return;
+    const dx = e.clientX - ds.startX;
+    if (!ds.moved && Math.abs(dx) > 6) {
+      ds.moved = true;
+      setDragging(true);
+    }
+    if (ds.moved) setDrag(dx);
+  };
+  const onPointerUp = (e) => {
+    const ds = dragStateRef.current;
+    if (ds.id !== e.pointerId) return;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+    const wasMoved = ds.moved;
+    dragStateRef.current = { id: null, startX: 0, moved: false };
+    if (!wasMoved) {
+      flipTop();
+      setDragging(false);
+      return;
+    }
+    setDragging(false);
+    if (Math.abs(drag) > 110) {
+      doFlick(drag > 0 ? 'know' : 'dontknow');
+    } else {
+      setDrag(0);
+    }
+  };
+
+  // Build the visible stack: top + N behind. Render from back→front so the
+  // top card is last in DOM (highest stacking).
+  const depth = Math.max(1, Math.min(4, t.stackDepth));
+  const visibleIndices = [];
+  for (let k = depth - 1; k >= 0; k--) {
+    if (index + k < total) visibleIndices.push(index + k);
+  }
+
+  // Per-position offsets (k=0 is top, k=1 is just under, etc.)
+  const offsetFor = (k) => k * t.stackOffset;
+  const scaleFor = (k) => 1 - k * (t.stackScale / 100);
+  const opacityFor = (k) => k === 0 ? 1 : Math.max(0, 1 - k * ((100 - t.stackOpacity) / 100));
+
+  return (
+    <>
+      <div className="app">
+        <div className="header">
+          <button
+            className="icon-btn"
+            aria-label="Отменить"
+            disabled={historyRef.current.length === 0 || isDone}
+            onClick={undo}
+          >
+            <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
+              <path d="M5.5 6.5L2.5 9l3 2.5M2.5 9h7.5a4 4 0 010 8h-2"
+                    stroke="currentColor" strokeWidth="1.4"
+                    strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <div className="pos">
+            <b>{String(Math.min(index + 1, total)).padStart(2, '0')}</b>
+            {' / '}
+            <span>{total}</span>
+          </div>
+          <div style={{ width: 28, height: 28 }}></div>
+        </div>
+
+        <div className="card-area" ref={cardAreaRef}>
+          <div className="stack">
+            {!isDone && visibleIndices.map((cardIdx) => {
+              const k = cardIdx - index; // 0 = top, 1 = next, ...
+              const isTop = k === 0;
+
+              // Build transform
+              let tx = 0, ty = offsetFor(k), rot = 0, rotY = 0;
+              const sc = scaleFor(k);
+              let opacity = opacityFor(k);
+
+              if (isTop) {
+                if (flick) {
+                  tx = flick.dir * 600;
+                  rot = flick.dir * 12;
+                } else {
+                  tx = drag;
+                  rot = drag * 0.018;
+                }
+              }
+
+              const transform =
+                `translateX(${tx}px) translateY(${ty}px) ` +
+                `rotate(${rot}deg) scale(${sc})`;
+
+              const className = [
+                'card',
+                isTop ? 'top' : 'behind',
+                isTop && dragging ? 'dragging' : '',
+                isTop && flick ? 'flicking' : '',
+                isTop && flipped ? 'flipped' : '',
+              ].filter(Boolean).join(' ');
+
+              const shadow = t.showShadow
+                ? `0 ${4 + k * 4}px ${12 + k * 8}px rgba(0,0,0,${0.06 + k * 0.02})`
+                : 'none';
+
+              return (
+                <div
+                  key={cardIdx}
+                  className={className}
+                  style={{
+                    transform,
+                    opacity,
+                    zIndex: 100 - k,
+                    transitionDuration: isTop && flick ? `${t.flickDuration}ms` : undefined,
+                    boxShadow: shadow,
+                  }}
+                  onPointerDown={isTop ? onPointerDown : undefined}
+                  onPointerMove={isTop ? onPointerMove : undefined}
+                  onPointerUp={isTop ? onPointerUp : undefined}
+                  onPointerCancel={isTop ? onPointerUp : undefined}
+                >
+                  <CardFaces card={cards[cardIdx]} />
+                </div>
+              );
+            })}
+
+            {isDone && (
+              <div className="done">
+                <div className="label">complete</div>
+                <h2>Готово.</h2>
+                <div className="stats">
+                  <div className="know-num"><span>{known}</span>знаю</div>
+                  <div className="learn-num"><span>{unknown}</span>учу</div>
+                </div>
+                <button className="reset" onClick={reset}>заново</button>
+              </div>
+            )}
+          </div>
+
+          {!isDone && (() => {
+            // Drive both side counters off drag/flick. Negative drag = учу (left),
+            // positive = знаю (right). During flick, pin to full intensity.
+            // Lives outside .stack so the 3D-perspective flipping card can't punch through.
+            const x = flick ? flick.dir * 200 : drag;
+            const learnIntensity = Math.min(Math.max(-x, 0) / 110, 1);
+            const knowIntensity  = Math.min(Math.max( x, 0) / 110, 1);
+            return (
+              <div className="swipe-counters" aria-hidden="true">
+                <div
+                  className="swipe-count learn"
+                  style={{
+                    opacity: learnIntensity,
+                    transform: `scale(${0.85 + learnIntensity * 0.25})`,
+                  }}
+                >
+                  <span className="lbl">учу</span>
+                  <span>{unknown + (learnIntensity > 0.6 ? 1 : 0)}</span>
+                </div>
+                <div
+                  className="swipe-count know"
+                  style={{
+                    opacity: knowIntensity,
+                    transform: `scale(${0.85 + knowIntensity * 0.25})`,
+                  }}
+                >
+                  <span>{known + (knowIntensity > 0.6 ? 1 : 0)}</span>
+                  <span className="lbl">знаю</span>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="actions">
+            <button
+              className="action-btn learn"
+              onClick={(e) => { e.stopPropagation(); doFlick('dontknow'); }}
+              disabled={isDone}
+            >
+              <span className="arrow">←</span>
+              <span>учу</span>
+            </button>
+            <button
+              className="action-btn know"
+              onClick={(e) => { e.stopPropagation(); doFlick('know'); }}
+              disabled={isDone}
+            >
+              <span>знаю</span>
+              <span className="arrow">→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Стопка карточек" />
+        <TweakSlider
+          label="Видно карточек"
+          value={t.stackDepth}
+          min={1} max={4} step={1}
+          onChange={(v) => setTweak('stackDepth', v)}
+        />
+        <TweakSlider
+          label="Сдвиг вниз"
+          value={t.stackOffset}
+          min={0} max={28} step={1} unit="px"
+          onChange={(v) => setTweak('stackOffset', v)}
+        />
+        <TweakSlider
+          label="Уменьшение"
+          value={t.stackScale}
+          min={0} max={10} step={1} unit="%"
+          onChange={(v) => setTweak('stackScale', v)}
+        />
+        <TweakSlider
+          label="Прозрачность задних"
+          value={t.stackOpacity}
+          min={20} max={100} step={5} unit="%"
+          onChange={(v) => setTweak('stackOpacity', v)}
+        />
+        <TweakToggle
+          label="Тень"
+          value={t.showShadow}
+          onChange={(v) => setTweak('showShadow', v)}
+        />
+        <TweakSection label="Анимация" />
+        <TweakSlider
+          label="Скорость свайпа"
+          value={t.flickDuration}
+          min={180} max={600} step={20} unit="ms"
+          onChange={(v) => setTweak('flickDuration', v)}
+        />
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+</body>
+</html>
