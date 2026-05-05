@@ -85,6 +85,20 @@ function CardFaces({ card }) {
   );
 }
 
+// ── localStorage helpers ──────────────────────────────────────────────────
+function cardKey(card) {
+  return card.type
+    ? `${card.type}::${card.phrase}`
+    : `word::${(card.forms || [''])[0]}::${(card.example || '').slice(0, 30)}`;
+}
+function loadKnownSet(deckId) {
+  try { return new Set(JSON.parse(localStorage.getItem('fc_known::' + deckId) || '[]')); }
+  catch { return new Set(); }
+}
+function saveKnown(deckId, set) {
+  localStorage.setItem('fc_known::' + deckId, JSON.stringify([...set]));
+}
+
 const STACK_DEPTH = 3;
 
 function PhrasalCardFaces({ card }) {
@@ -131,7 +145,13 @@ function PhrasalCardFaces({ card }) {
 }
 
 function Flashcards({ onBack, deckId = 'b1b2' }) {
+  const [sessionKey, setSessionKey] = useState(0);
+  const knownSetRef = useRef(null);
+
   const cards = useMemo(() => {
+    const knownSet = loadKnownSet(deckId);
+    knownSetRef.current = knownSet;
+
     const shuffle = (arr) => {
       const a = [...arr];
       for (let i = a.length - 1; i > 0; i--) {
@@ -148,13 +168,12 @@ function Flashcards({ onBack, deckId = 'b1b2' }) {
     };
 
     if (deckMap[deckId]) {
-      const deck = deckMap[deckId];
-      // seg1 keeps chronological order, others shuffle
+      const deck = deckMap[deckId].filter(c => !knownSet.has(cardKey(c)));
       return deckId === 'seg1' ? [...deck] : shuffle(deck);
     }
 
     // Word decks: group by verb (V1 form), interleave
-    const source = window.WORD_DECK;
+    const source = window.WORD_DECK.filter(c => !knownSet.has(cardKey(c)));
     const groups = {};
     for (const card of source) {
       const key = card.forms[0];
@@ -170,7 +189,7 @@ function Flashcards({ onBack, deckId = 'b1b2' }) {
       }
     }
     return result;
-  }, [deckId]);
+  }, [deckId, sessionKey]);
 
   const [index,    setIndex]    = useState(0);
   const [flipped,  setFlipped]  = useState(false);
@@ -193,12 +212,19 @@ function Flashcards({ onBack, deckId = 'b1b2' }) {
 
   const advance = useCallback((action) => {
     histRef.current.push({ index, action });
-    if (action === 'know') setKnown(k => k + 1); else setLearning(l => l + 1);
+    if (action === 'know') {
+      setKnown(k => k + 1);
+      const key = cardKey(cards[index]);
+      knownSetRef.current.add(key);
+      saveKnown(deckId, knownSetRef.current);
+    } else {
+      setLearning(l => l + 1);
+    }
     setIndex(i => i + 1);
     setFlipped(false);
     setDrag(0);
     setFlicking(null);
-  }, [index]);
+  }, [index, cards, deckId]);
 
   const doFlick = useCallback((action) => {
     if (flicking || isDone) return;
@@ -210,19 +236,34 @@ function Flashcards({ onBack, deckId = 'b1b2' }) {
   const handleUndo = useCallback(() => {
     if (!histRef.current.length) return;
     const last = histRef.current.pop();
-    if (last.action === 'know') setKnown(k => Math.max(0, k - 1));
-    else setLearning(l => Math.max(0, l - 1));
+    if (last.action === 'know') {
+      setKnown(k => Math.max(0, k - 1));
+      const key = cardKey(cards[last.index]);
+      knownSetRef.current.delete(key);
+      saveKnown(deckId, knownSetRef.current);
+    } else {
+      setLearning(l => Math.max(0, l - 1));
+    }
     setIndex(last.index);
     setFlipped(false);
     setDrag(0);
     setFlicking(null);
-  }, []);
+  }, [cards, deckId]);
 
   const reset = useCallback(() => {
     histRef.current = [];
     setIndex(0); setKnown(0); setLearning(0);
     setFlipped(false); setDrag(0); setFlicking(null);
+    setSessionKey(k => k + 1);
   }, []);
+
+  const clearKnown = useCallback(() => {
+    localStorage.removeItem('fc_known::' + deckId);
+    histRef.current = [];
+    setIndex(0); setKnown(0); setLearning(0);
+    setFlipped(false); setDrag(0); setFlicking(null);
+    setSessionKey(k => k + 1);
+  }, [deckId]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -354,7 +395,21 @@ function Flashcards({ onBack, deckId = 'b1b2' }) {
                   <div className="know-num"><span>{known}</span>знаю</div>
                   <div className="learn-num"><span>{learning}</span>учу</div>
                 </div>
-                <button className="reset" onClick={reset}>заново</button>
+                {(() => {
+                  const totalSaved = loadKnownSet(deckId).size;
+                  return totalSaved > 0 && (
+                    <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
+                      {totalSaved} карточек сохранено — не покажу снова
+                    </div>
+                  );
+                })()}
+                <button className="reset" onClick={reset} style={{ marginTop: 16 }}>заново</button>
+                {loadKnownSet(deckId).size > 0 && (
+                  <button className="reset" onClick={clearKnown}
+                    style={{ marginTop: 8, opacity: 0.55, fontSize: 13 }}>
+                    сбросить прогресс · показать все
+                  </button>
+                )}
               </div>
             )}
           </div>
