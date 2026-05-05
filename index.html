@@ -24,9 +24,11 @@
     const [view, setView] = useState(
       window.location.pathname === '/cards' ? 'flashcards' : 'home'
     );
+    const [deckId, setDeckId] = useState('b1b2');
 
-    function navigate(to) {
+    function navigate(to, id) {
       if (to === 'flashcards') {
+        if (id) setDeckId(id);
         window.history.pushState(null, '', '/cards');
         setView('flashcards');
       } else {
@@ -44,9 +46,9 @@
     }, []);
 
     if (view === 'flashcards') {
-      return <window.Flashcards onBack={() => navigate('home')} />;
+      return <window.Flashcards onBack={() => navigate('home')} deckId={deckId} />;
     }
-    return <window.Home onNavigate={() => navigate('flashcards')} />;
+    return <window.Home onNavigate={(id) => navigate('flashcards', id)} />;
   }
 
   // Defer mount until component files have finished loading
