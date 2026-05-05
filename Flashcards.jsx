@@ -113,7 +113,7 @@ function PhrasalCardFaces({ card }) {
         <div className="rule" />
         <div className="example">{card.context}</div>
       </div>
-      <div className="face back" style={{ justifyContent: 'flex-start', overflowY: 'auto' }}>
+      <div className="face back" style={{ justifyContent: 'flex-start' }}>
         <div className="back-inner">
           <div className="forms" style={{ flexWrap: 'wrap' }}>{card.translation}</div>
           <dl className="meta">
