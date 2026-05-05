@@ -154,7 +154,7 @@ function PhrasalCardFaces({ card }) {
           <dl className="meta">
             <dt>пример</dt>
             <dd className="example-back">{card.context}</dd>
-            {!isVocab && card.contextTranslation && (
+            {card.contextTranslation && (
               <React.Fragment>
                 <dt>по-русски</dt>
                 <dd className="ru-meaning">{card.contextTranslation}</dd>
