@@ -1,5 +1,38 @@
 const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US';
+  u.rate = 0.88;
+  window.speechSynthesis.speak(u);
+}
+
+function SpeakBtn({ text }) {
+  return (
+    <button
+      className="speak-btn"
+      aria-label="Произнести"
+      onPointerDown={e => e.stopPropagation()}
+      onClick={e => { e.stopPropagation(); speak(text); }}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        padding: '0 0 8px 0', display: 'block',
+        color: 'var(--muted)', lineHeight: 1, opacity: 0.5,
+        alignSelf: 'flex-start',
+      }}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+      </svg>
+    </button>
+  );
+}
+
 function autoFit(el, max, min) {
   if (!el) return;
   const parent = el.parentElement;
@@ -45,6 +78,7 @@ function CardFaces({ card }) {
   return (
     <>
       <div className="face front">
+        <SpeakBtn text={formValue} />
         <div className="word" ref={wordRef}>{formValue}</div>
         <div className="rule" />
         <div className="example">{card.example}</div>
@@ -109,6 +143,7 @@ function PhrasalCardFaces({ card }) {
       <div className="face front">
         <div style={{ fontSize: 11, fontFamily: "'Geist Mono', monospace", letterSpacing: '0.14em',
           textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>{typeLabel}</div>
+        <SpeakBtn text={card.phrase} />
         <div className="word" style={{ fontSize: 'clamp(24px, 5.5vw, 46px)' }}>{card.phrase}</div>
         <div className="rule" />
         <div className="example">{card.context}</div>
@@ -277,7 +312,7 @@ function Flashcards({ onBack, deckId = 'b1b2' }) {
   }, [flipTop, doFlick, handleUndo]);
 
   const onPointerDown = (e) => {
-    if (e.target.closest('.action-btn')) return;
+    if (e.target.closest('.action-btn') || e.target.closest('.speak-btn')) return;
     if (flicking) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     dragState.current = { id: e.pointerId, startX: e.clientX, moved: false };
