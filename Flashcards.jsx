@@ -87,26 +87,82 @@ function CardFaces({ card }) {
 
 const STACK_DEPTH = 3;
 
-function Flashcards() {
+function PhrasalCardFaces({ card }) {
+  const isVocab = card.type === 'vocab';
+  const typeLabel = { phrasal: 'фразовый', idiom: 'идиома', vocab: card.level || 'слово' }[card.type] || '';
+  return (
+    <>
+      <div className="face front">
+        <div style={{ fontSize: 11, fontFamily: "'Geist Mono', monospace", letterSpacing: '0.14em',
+          textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>{typeLabel}</div>
+        <div className="word" style={{ fontSize: 'clamp(24px, 5.5vw, 46px)' }}>{card.phrase}</div>
+        <div className="rule" />
+        <div className="example">{card.context}</div>
+      </div>
+      <div className="face back" style={{ justifyContent: 'flex-start', overflowY: 'auto' }}>
+        <div className="back-inner">
+          <div className="forms" style={{ flexWrap: 'wrap' }}>{card.translation}</div>
+          <dl className="meta">
+            <dt>пример</dt>
+            <dd className="example-back">{card.context}</dd>
+            {!isVocab && card.contextTranslation && (
+              <React.Fragment>
+                <dt>по-русски</dt>
+                <dd className="ru-meaning">{card.contextTranslation}</dd>
+              </React.Fragment>
+            )}
+            {!isVocab && card.literalTranslation && (
+              <React.Fragment>
+                <dt>буквально</dt>
+                <dd>{card.literalTranslation}</dd>
+              </React.Fragment>
+            )}
+            {!isVocab && card.history && (
+              <React.Fragment>
+                <dt>история</dt>
+                <dd style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{card.history}</dd>
+              </React.Fragment>
+            )}
+          </dl>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Flashcards({ onBack, deckId = 'b1b2' }) {
   const cards = useMemo(() => {
     const shuffle = (arr) => {
-      for (let i = arr.length - 1; i > 0; i--) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
+        [a[i], a[j]] = [a[j], a[i]];
       }
-      return arr;
+      return a;
     };
 
-    // Group by verb (V1 form), shuffle within each group
+    const deckMap = {
+      seg1:    window.SEGMENT1_DECK,
+      phrasal: window.PHRASAL_DECK,
+      idioms:  window.IDIOM_DECK,
+    };
+
+    if (deckMap[deckId]) {
+      const deck = deckMap[deckId];
+      // seg1 keeps chronological order, others shuffle
+      return deckId === 'seg1' ? [...deck] : shuffle(deck);
+    }
+
+    // Word decks: group by verb (V1 form), interleave
+    const source = window.WORD_DECK;
     const groups = {};
-    for (const card of window.WORD_DECK) {
+    for (const card of source) {
       const key = card.forms[0];
       if (!groups[key]) groups[key] = [];
       groups[key].push(card);
     }
     const queues = shuffle(Object.values(groups).map(g => shuffle(g)));
 
-    // Interleave: one card from each verb in turn
     const result = [];
     while (queues.some(q => q.length > 0)) {
       for (const queue of queues) {
@@ -114,7 +170,7 @@ function Flashcards() {
       }
     }
     return result;
-  }, []);
+  }, [deckId]);
 
   const [index,    setIndex]    = useState(0);
   const [flipped,  setFlipped]  = useState(false);
@@ -282,7 +338,10 @@ function Flashcards() {
                   onPointerUp={isTop ? onPointerUp : undefined}
                   onPointerCancel={isTop ? onPointerUp : undefined}
                 >
-                  <CardFaces card={cards[cardIdx]} />
+                  {cards[cardIdx].type
+                    ? <PhrasalCardFaces card={cards[cardIdx]} />
+                    : <CardFaces card={cards[cardIdx]} />
+                  }
                 </div>
               );
             })}
