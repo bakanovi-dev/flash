@@ -57,12 +57,25 @@ function QuoteCardFaces({ card }) {
           <div className="reel-expressions">
             {card.expressions.map((expr, i) => (
               <div key={i} className="reel-expr">
-                <div className="reel-expr-phrase">{expr.phrase}</div>
+                <div className="reel-expr-header">
+                  <span className="reel-expr-phrase">{expr.phrase}</span>
+                </div>
                 <div className="reel-expr-literal">{expr.literal}</div>
                 <div className="reel-expr-explanation">{expr.explanation}</div>
               </div>
             ))}
           </div>
+          {card.words && card.words.length > 0 && (
+            <div className="reel-words">
+              {card.words.map((w, i) => (
+                <div key={i} className="reel-word-chip">
+                  <span className={"reel-level reel-level-" + w.level}>{w.level}</span>
+                  <span className="reel-word-text">{w.word}</span>
+                  <span className="reel-word-tr">{w.translation}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>
