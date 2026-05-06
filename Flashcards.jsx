@@ -486,4 +486,7 @@ function Flashcards({ onBack, deckId = 'b1b2' }) {
   );
 }
 
-window.Flashcards = Flashcards;
+window.Flashcards        = Flashcards;
+window.CardFaces         = CardFaces;
+window.PhrasalCardFaces  = PhrasalCardFaces;
+window.cardKey           = cardKey;

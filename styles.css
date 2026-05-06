@@ -299,3 +299,84 @@ a { color: inherit; text-decoration: none; }
   font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
   cursor: pointer; font-weight: 500;
 }
+
+/* ── HOME: reel button ──────────────────────────── */
+.reel-mode-btn {
+  background: none; border: 1px solid var(--line); cursor: pointer;
+  color: var(--muted); padding: 5px 7px; display: flex; align-items: center;
+  border-radius: 4px; transition: color 140ms, border-color 140ms;
+  flex-shrink: 0;
+}
+.reel-mode-btn:hover { color: var(--ink); border-color: var(--ink); }
+
+/* ── REEL MODE ──────────────────────────────────── */
+.reel-app {
+  position: fixed; inset: 0;
+  background: #111;
+  display: flex; flex-direction: column;
+  overflow: hidden; user-select: none;
+}
+
+.reel-header {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 20px 0;
+}
+
+.reel-back-btn {
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.75); padding: 8px; display: flex;
+  transition: color 140ms;
+}
+.reel-back-btn:hover { color: #fff; }
+
+.reel-counter {
+  font-family: 'Geist Mono', monospace; font-size: 12px;
+  color: rgba(255,255,255,0.45); letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+
+.reel-scene {
+  flex: 1;
+  display: flex; align-items: stretch; justify-content: center;
+  perspective: 1600px;
+  padding: 70px 72px 52px 20px;
+  cursor: pointer; touch-action: none;
+}
+
+.reel-card {
+  flex: 1; max-width: 480px;
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+/* sidebar: like / dislike */
+.reel-sidebar {
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+  z-index: 10;
+}
+
+.reel-btn {
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.6);
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 6px; transition: color 180ms ease, transform 120ms ease;
+}
+.reel-btn:hover            { color: rgba(255,255,255,0.9); }
+.reel-btn:active           { transform: scale(0.88); }
+.reel-btn.liked            { color: var(--know); }
+.reel-btn.disliked         { color: var(--accent); }
+
+.reel-btn-count {
+  font-family: 'Geist Mono', monospace; font-size: 11px;
+  letter-spacing: 0.04em; font-variant-numeric: tabular-nums;
+  min-width: 16px; text-align: center;
+}
+
+.reel-hint {
+  position: absolute; bottom: 16px; left: 0; right: 0;
+  text-align: center; pointer-events: none;
+  font-family: 'Geist Mono', monospace; font-size: 11px;
+  color: rgba(255,255,255,0.28); letter-spacing: 0.1em;
+}
