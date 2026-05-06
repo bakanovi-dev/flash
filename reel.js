@@ -1,6 +1,10 @@
-window.REEL_DECK = [
+[
   {
     "id": 1,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 1,
+    "context": "Куп (главный герой, бывший управляющий хедж-фондом) рассказывает зрителю закадровым голосом про карьерный путь финансиста — этап, когда деньги начинают расти.",
     "quote_en": "You start earning some big bucks... which only serves to make you aware of the even bigger bucks you could be earning.",
     "quote_ru": "Ты начинаешь зарабатывать большие деньги — и это только заставляет тебя осознать, какие ещё большие деньги ты мог бы зарабатывать.",
     "expressions": [
@@ -18,6 +22,10 @@ window.REEL_DECK = [
   },
   {
     "id": 2,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 1,
+    "context": "Куп (главный герой) закадровым голосом описывает зрителю первый этап взрослой жизни — выпуск из колледжа и брак, когда у пары ничего нет.",
     "quote_en": "You're dead broke, but there's two of you now.",
     "quote_ru": "Вы оба нищие, но теперь вас уже двое.",
     "expressions": [
@@ -30,6 +38,10 @@ window.REEL_DECK = [
   },
   {
     "id": 3,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 1,
+    "context": "Куп (главный герой) закадровым голосом объясняет зрителю стадию, когда у успешного финансиста уже есть дом, машина и долги под них.",
     "quote_en": "You're leveraged, which is a fancy way of saying you've got something to show for your efforts.",
     "quote_ru": "Ты «в плече» — это красивый способ сказать, что у тебя есть что показать за свои труды.",
     "expressions": [
@@ -52,6 +64,10 @@ window.REEL_DECK = [
   },
   {
     "id": 4,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 1,
+    "context": "Куп (главный герой) закадровым голосом описывает зрителю «вершину», к которой стремятся все жители его богатого пригорода Westmont Village.",
     "quote_en": "That hallowed plateau where, for the first time, you can actually afford your own life.",
     "quote_ru": "То заветное плато, на котором ты впервые по-настоящему можешь позволить себе свою собственную жизнь.",
     "expressions": [
@@ -69,6 +85,10 @@ window.REEL_DECK = [
   },
   {
     "id": 5,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 1,
+    "context": "Куп (главный герой) закадровым голосом перечисляет зрителю стандартный набор финансовых решений среднего успешного американца.",
     "quote_en": "You buy a house, 30% down, 30-year jumbo at four and a half percent.",
     "quote_ru": "Ты покупаешь дом: 30% первый взнос, 30-летняя джамбо-ипотека под 4,5%.",
     "expressions": [
@@ -86,6 +106,10 @@ window.REEL_DECK = [
   },
   {
     "id": 6,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 1,
+    "context": "Куп (главный герой) закадровым голосом подводит итог финансовой картины своей жизни после развода с женой Мел и недавнего увольнения из хедж-фонда.",
     "quote_en": "A bank account that was still in the red from the divorce.",
     "quote_ru": "Банковский счёт, который всё ещё в минусе после развода.",
     "expressions": [
@@ -98,6 +122,10 @@ window.REEL_DECK = [
   },
   {
     "id": 7,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 1,
+    "context": "Куп (главный герой) закадровым голосом перечисляет свои финансовые обязательства, на фоне которых он ищет выход после потери высокооплачиваемой работы.",
     "quote_en": "A maxed out home equity line, tuition, property taxes...",
     "quote_ru": "Кредитная линия под дом, выбранная подчистую, обучение, налог на недвижимость…",
     "expressions": [
@@ -115,6 +143,10 @@ window.REEL_DECK = [
   },
   {
     "id": 8,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 1,
+    "context": "Куп (главный герой, только что уволенный из хедж-фонда) сидит в баре с другом-финансистом Барни и пытается понять, на сколько ему хватит сбережений.",
     "quote_en": "I just need to know how long I can float on what I got.",
     "quote_ru": "Мне нужно понять, насколько меня хватит на том, что есть.",
     "expressions": [
@@ -127,6 +159,10 @@ window.REEL_DECK = [
   },
   {
     "id": 9,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 1,
+    "context": "Барни (друг-финансист) в баре отвечает Купу (только что уволенному из хедж-фонда) на вопрос, на сколько хватит его сбережений. Прикинул его обязательные ежемесячные расходы и выдаёт прогноз.",
     "quote_en": "Your nut? Six months. Seven tops.",
     "quote_ru": "Твои месячные расходы? Шесть месяцев. Максимум семь.",
     "expressions": [
@@ -144,6 +180,10 @@ window.REEL_DECK = [
   },
   {
     "id": 10,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 1,
+    "context": "Джек (босс хедж-фонда) — Купу (главному герою) в кабинете, где его только что уволили из-за слухов о связи с женой клиента. Озвучивает условия выходного пакета.",
     "quote_en": "They'll give you six months' draw if you don't sue.",
     "quote_ru": "Они дадут тебе полугодовую выплату, если не будешь судиться.",
     "expressions": [
@@ -156,6 +196,10 @@ window.REEL_DECK = [
   },
   {
     "id": 11,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 1,
+    "context": "Куп (главный герой) — Джеку (боссу), услышав предложенные условия увольнения из хедж-фонда. Защищает свой капитал, который он накопил в фонде за годы работы.",
     "quote_en": "My capital account? That's my money, Jack. No way.",
     "quote_ru": "Мой капитальный счёт? Это мои деньги, Джек. Ни в коем случае.",
     "expressions": [
@@ -168,6 +212,10 @@ window.REEL_DECK = [
   },
   {
     "id": 12,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 1,
+    "context": "Куп (главный герой, недавно уволенный из хедж-фонда) — Барни (другу-финансисту), объясняя, почему не может сразу уйти к конкурентам и забрать своих клиентов.",
     "quote_en": "I have a two-year non-solicit.",
     "quote_ru": "У меня двухлетний запрет на переманивание клиентов.",
     "expressions": [
@@ -180,6 +228,10 @@ window.REEL_DECK = [
   },
   {
     "id": 13,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 2,
+    "context": "Куп (главный герой) закадровым голосом описывает зрителю элитный загородный клуб Westmont, центр светской жизни его богатого пригорода, и принятые там наценки.",
     "quote_en": "40% above market for every salad, burger, coffee and cocktail they serve.",
     "quote_ru": "На 40% выше рынка за каждый салат, бургер, кофе и коктейль, что у них подают.",
     "expressions": [
@@ -192,6 +244,10 @@ window.REEL_DECK = [
   },
   {
     "id": 14,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 2,
+    "context": "Бен Кон (управляющий конкурирующего хедж-фонда) — Купу (главному герою) на собеседовании, куда тот пришёл после увольнения. Объясняет принцип оплаты в новой фирме.",
     "quote_en": "We eat what we kill, but often I will partner a manager with a specific target.",
     "quote_ru": "Мы едим то, что сами убили, но часто я соединяю менеджера с конкретной целью.",
     "expressions": [
@@ -204,6 +260,10 @@ window.REEL_DECK = [
   },
   {
     "id": 15,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 4,
+    "context": "Куп (главный герой) — финансовому консультанту по телефону, преуменьшая серьёзность своих денежных проблем после увольнения и кражи драгоценностей у соседей.",
     "quote_en": "Yeah, it's just a little cash crunch. We're fine.",
     "quote_ru": "Да, просто небольшой дефицит наличности. Мы в порядке.",
     "expressions": [
@@ -216,6 +276,10 @@ window.REEL_DECK = [
   },
   {
     "id": 16,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 5,
+    "context": "Куп (главный герой) закадровым голосом размышляет о том, как от мелких краж у соседей он перешёл к более крупным и опасным целям.",
     "quote_en": "Higher risk, higher yield. Or maybe I was just starting to like it.",
     "quote_ru": "Выше риск — выше доходность. А может, мне просто начинало это нравиться.",
     "expressions": [
@@ -228,6 +292,10 @@ window.REEL_DECK = [
   },
   {
     "id": 17,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 2,
+    "context": "Куп (главный герой) закадровым голосом объясняет зрителю, почему кражи у богатых соседей оказались выгоднее работы в хедж-фонде.",
     "quote_en": "It was hard to argue with that kind of tax-free return on investment.",
     "quote_ru": "Сложно было спорить с такой безналоговой доходностью инвестиций.",
     "expressions": [
@@ -245,6 +313,10 @@ window.REEL_DECK = [
   },
   {
     "id": 18,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 9,
+    "context": "Куп (главный герой) — Кэт (своему адвокату), когда обсуждает варианты сделки со следствием. Размышляет о том, как профессиональный навык применить к собственной ситуации.",
     "quote_en": "I've spent the last 20 years of my life hedging against risk.",
     "quote_ru": "Я последние 20 лет жизни занимался хеджированием рисков.",
     "expressions": [
@@ -257,6 +329,10 @@ window.REEL_DECK = [
   },
   {
     "id": 19,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 9,
+    "context": "Кэт (адвокат) — Купу (главному герою), которого арестовали по подозрению в убийстве. Объясняет ему стратегию признания вины как способ минимизировать ущерб.",
     "quote_en": "The plea bargain is your hedge.",
     "quote_ru": "Сделка со следствием — твой хедж.",
     "expressions": [
@@ -274,6 +350,10 @@ window.REEL_DECK = [
   },
   {
     "id": 20,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 1,
+    "context": "Куп (главный герой) закадровым голосом объясняет зрителю свою «бизнес-модель» — кражи у богатых соседей, которые часто даже не замечают пропажу драгоценностей и часов.",
     "quote_en": "Piles of forgotten wealth just lying around in drawers.",
     "quote_ru": "Кучи забытого богатства, просто валяющиеся в ящиках.",
     "expressions": [
@@ -286,6 +366,10 @@ window.REEL_DECK = [
   },
   {
     "id": 21,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 2,
+    "context": "Куп (главный герой) закадровым голосом описывает зрителю атмосферу званых ужинов и вечеринок в богатом пригороде Westmont, где он живёт.",
     "quote_en": "Great food, good company, and an endless parade of conspicuous consumerism.",
     "quote_ru": "Отличная еда, хорошая компания и бесконечный парад демонстративного потребления.",
     "expressions": [
@@ -298,6 +382,10 @@ window.REEL_DECK = [
   },
   {
     "id": 22,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 3,
+    "context": "Куп (главный герой) закадровым голосом объясняет зрителю, почему он начал красть редкие винтажные вина из погребов соседей — у них есть рынок коллекционеров.",
     "quote_en": "They're more than happy to fork out 32 grand a bottle for it.",
     "quote_ru": "Они с радостью раскошелятся на 32 штуки за бутылку.",
     "expressions": [
@@ -320,6 +408,10 @@ window.REEL_DECK = [
   },
   {
     "id": 23,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 4,
+    "context": "Лу (скупщица краденого, бывшая воровка) — Купу (главному герою), оценивая часы Patek Philippe, которые он только что украл у соседа.",
     "quote_en": "That watch is a serious piece of hardware.",
     "quote_ru": "Эти часы — серьёзный экземпляр.",
     "expressions": [
@@ -332,6 +424,10 @@ window.REEL_DECK = [
   },
   {
     "id": 24,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 4,
+    "context": "Куп (главный герой) закадровым голосом рассказывает зрителю про сумку Hermès Birkin — сейчас он планирует украсть такую у соседки Сюзанны.",
     "quote_en": "There's probably no more obnoxious or coveted status symbol than the Hermès Birkin.",
     "quote_ru": "Пожалуй, нет более вызывающего и желанного символа статуса, чем Hermès Birkin.",
     "expressions": [
@@ -349,6 +445,10 @@ window.REEL_DECK = [
   },
   {
     "id": 25,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 4,
+    "context": "Куп (главный герой) закадровым голосом объясняет зрителю, как работает система покупки сумки Hermès Birkin — нужно сначала потратить большие суммы на другие товары бренда, чтобы тебя поставили в лист ожидания.",
     "quote_en": "Spending tens of thousands on jewelry and accessories, aka Birkin bait.",
     "quote_ru": "Тратишь десятки тысяч на украшения и аксессуары — так называемую «приманку для Биркина».",
     "expressions": [
@@ -366,6 +466,10 @@ window.REEL_DECK = [
   },
   {
     "id": 26,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 3,
+    "context": "Куп (главный герой) закадровым голосом размышляет о жителях своего богатого пригорода — у них уже есть всё, и в их жизни больше нет места переменам.",
     "quote_en": "This would be the sum total of their lives. Their futures are already written.",
     "quote_ru": "Это и будет итогом их жизни. Их будущее уже написано.",
     "expressions": [
@@ -383,6 +487,10 @@ window.REEL_DECK = [
   },
   {
     "id": 27,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 3,
+    "context": "Куп (главный герой) закадровым голосом размышляет, почему богатые жители его пригорода так отчаянно скупают вино, часы, машины — это попытка чем-то заполнить экзистенциальную пустоту.",
     "quote_en": "And so the quest to stave off the emptiness began.",
     "quote_ru": "И так начался поход против пустоты.",
     "expressions": [
@@ -400,6 +508,10 @@ window.REEL_DECK = [
   },
   {
     "id": 28,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 3,
+    "context": "Куп (главный герой) закадровым голосом объясняет зрителю, почему люксовые бренды и винные дилеры так хорошо зарабатывают — они паразитируют на скуке и тревоге богатых соседей Купа.",
     "quote_en": "Cash in on the quiet desperation of rich, middle-aged men.",
     "quote_ru": "Нажиться на тихом отчаянии богатых мужчин среднего возраста.",
     "expressions": [
@@ -417,6 +529,10 @@ window.REEL_DECK = [
   },
   {
     "id": 29,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 4,
+    "context": "Лу (скупщица краденого) — Купу (главному герою) в своём подвале-приёмке, обсуждая судьбу украденной им редкой сумки Hermès Birkin лимитированной серии.",
     "quote_en": "Sure, we'll get a fat check, but it's a limited edition piece.",
     "quote_ru": "Конечно, мы получим жирный чек, но это эксклюзивная вещь.",
     "expressions": [
@@ -434,6 +550,10 @@ window.REEL_DECK = [
   },
   {
     "id": 30,
+    "show": "Your Friends & Neighbors",
+    "season": 1,
+    "episode": 7,
+    "context": "Куп (главный герой) закадровым голосом описывает зрителю благотворительный гала-ужин в Westmont — место, где собираются богатые одинокие женщины, идеальные жертвы для его краж драгоценностей.",
     "quote_en": "It's a target-rich environment with a built-in spotlight.",
     "quote_ru": "Богатая на мишени среда — да ещё и со встроенной подсветкой.",
     "expressions": [
@@ -449,4 +569,4 @@ window.REEL_DECK = [
       }
     ]
   }
-];
+]

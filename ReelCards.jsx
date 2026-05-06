@@ -33,11 +33,23 @@ function SpeakBtn({ text }) {
 }
 
 function QuoteCardFaces({ card }) {
+  const epLabel = card.show
+    ? `${card.show} · S${String(card.season).padStart(2,'0')}E${String(card.episode).padStart(2,'0')}`
+    : null;
+
   return (
     <>
-      <div className="face front" style={{ justifyContent: 'center' }}>
-        <SpeakBtn text={card.quote_en} />
-        <div className="reel-quote">{card.quote_en}</div>
+      <div className="face front" style={{ justifyContent: 'space-between' }}>
+        <div className="reel-meta">
+          {epLabel && <span className="reel-meta-show">{epLabel}</span>}
+        </div>
+        <div>
+          <SpeakBtn text={card.quote_en} />
+          <div className="reel-quote">{card.quote_en}</div>
+        </div>
+        {card.context && (
+          <div className="reel-context">{card.context}</div>
+        )}
       </div>
       <div className="face back" style={{ justifyContent: 'flex-start', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <div className="back-inner">
