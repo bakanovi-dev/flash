@@ -39,17 +39,17 @@ function QuoteCardFaces({ card }) {
 
   return (
     <>
-      <div className="face front" style={{ justifyContent: 'space-between' }}>
+      <div className="face front" style={{ justifyContent: 'center', gap: 20 }}>
         <div className="reel-meta">
           {epLabel && <span className="reel-meta-show">{epLabel}</span>}
         </div>
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <SpeakBtn text={card.quote_en} />
           <div className="reel-quote">{card.quote_en}</div>
+          {card.context && (
+            <div className="reel-context">{card.context}</div>
+          )}
         </div>
-        {card.context && (
-          <div className="reel-context">{card.context}</div>
-        )}
       </div>
       <div className="face back" style={{ justifyContent: 'flex-start', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <div className="back-inner">
