@@ -17,13 +17,17 @@
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <script type="text/babel" src="Home.jsx"></script>
 <script type="text/babel" src="Flashcards.jsx"></script>
+<script type="text/babel" src="ReelCards.jsx"></script>
 <script type="text/babel">
   const { useState, useEffect } = React;
 
   function App() {
-    const [view, setView] = useState(
-      window.location.pathname === '/cards' ? 'flashcards' : 'home'
-    );
+    const [view, setView] = useState(() => {
+      const p = window.location.pathname;
+      if (p === '/cards') return 'flashcards';
+      if (p === '/reel')  return 'reel';
+      return 'home';
+    });
     const [deckId, setDeckId] = useState('b1b2');
 
     function navigate(to, id) {
@@ -31,6 +35,10 @@
         if (id) setDeckId(id);
         window.history.pushState(null, '', '/cards');
         setView('flashcards');
+      } else if (to === 'reel') {
+        if (id) setDeckId(id);
+        window.history.pushState(null, '', '/reel');
+        setView('reel');
       } else {
         window.history.pushState(null, '', '/');
         setView('home');
@@ -39,7 +47,10 @@
 
     useEffect(() => {
       function onPopState() {
-        setView(window.location.pathname === '/cards' ? 'flashcards' : 'home');
+        const p = window.location.pathname;
+        if (p === '/cards') setView('flashcards');
+        else if (p === '/reel') setView('reel');
+        else setView('home');
       }
       window.addEventListener('popstate', onPopState);
       return () => window.removeEventListener('popstate', onPopState);
@@ -48,12 +59,14 @@
     if (view === 'flashcards') {
       return <window.Flashcards onBack={() => navigate('home')} deckId={deckId} />;
     }
-    return <window.Home onNavigate={(id) => navigate('flashcards', id)} />;
+    if (view === 'reel') {
+      return <window.ReelCards onBack={() => navigate('home')} deckId={deckId} />;
+    }
+    return <window.Home onNavigate={(id, mode) => navigate(mode || 'flashcards', id)} />;
   }
 
-  // Defer mount until component files have finished loading
   (function mount() {
-    if (window.Home && window.Flashcards) {
+    if (window.Home && window.Flashcards && window.ReelCards) {
       ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     } else {
       setTimeout(mount, 16);

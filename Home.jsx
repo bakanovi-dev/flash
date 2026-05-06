@@ -20,6 +20,19 @@ function DeckRow({ deck, onNavigate }) {
             <div className="progress-fill" style={{width: pct + "%"}} />
           </div>
         )}
+        {deck.active && (
+          <button
+            className="reel-mode-btn"
+            title="Reel"
+            aria-label="Открыть в режиме Reel"
+            onClick={(e) => { e.stopPropagation(); onNavigate(deck.id, 'reel'); }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+              <path d="M7 2v20M17 2v20M2 12h20M2 7h5M17 7h5M2 17h5M17 17h5"/>
+            </svg>
+          </button>
+        )}
         <div className="arrow">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
