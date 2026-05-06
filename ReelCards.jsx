@@ -1,29 +1,72 @@
 const { useState, useRef, useMemo, useEffect } = React;
 
-function ReelCards({ onBack, deckId = 'b1b2' }) {
-  const cards = useMemo(() => {
-    const deckMap = {
-      seg1:    window.SEGMENT1_DECK,
-      phrasal: window.PHRASAL_DECK,
-      idioms:  window.IDIOM_DECK,
-    };
-    if (deckMap[deckId]) return [...deckMap[deckId]];
-    const shuffle = (arr) => {
-      const a = [...arr];
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    };
-    return shuffle([...window.WORD_DECK]);
-  }, [deckId]);
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US'; u.rate = 0.88;
+  window.speechSynthesis.speak(u);
+}
+
+function SpeakBtn({ text }) {
+  return (
+    <button
+      className="speak-btn"
+      aria-label="Произнести"
+      onPointerDown={e => e.stopPropagation()}
+      onClick={e => { e.stopPropagation(); speak(text); }}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        padding: '0 0 8px 0', display: 'block',
+        color: 'var(--muted)', lineHeight: 1, opacity: 0.5,
+        alignSelf: 'flex-start',
+      }}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+      </svg>
+    </button>
+  );
+}
+
+function QuoteCardFaces({ card }) {
+  return (
+    <>
+      <div className="face front" style={{ justifyContent: 'center' }}>
+        <SpeakBtn text={card.quote_en} />
+        <div className="reel-quote">{card.quote_en}</div>
+      </div>
+      <div className="face back" style={{ justifyContent: 'flex-start', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div className="back-inner">
+          <div className="reel-quote-ru">{card.quote_ru}</div>
+          <div className="reel-expressions">
+            {card.expressions.map((expr, i) => (
+              <div key={i} className="reel-expr">
+                <div className="reel-expr-phrase">{expr.phrase}</div>
+                <div className="reel-expr-literal">{expr.literal}</div>
+                <div className="reel-expr-explanation">{expr.explanation}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function reelKey(card) { return 'reel::' + card.id; }
+
+function ReelCards({ onBack }) {
+  const cards = useMemo(() => window.REEL_DECK || [], []);
 
   const [index,        setIndex]        = useState(0);
   const [flipped,      setFlipped]      = useState(false);
   const [dy,           setDy]           = useState(0);
   const [dragging,     setDragging]     = useState(false);
-  const [exitDir,      setExitDir]      = useState(null); // 'up' | 'down' | null
+  const [exitDir,      setExitDir]      = useState(null);
   const [pendingIndex, setPendingIndex] = useState(null);
   const [likes,        setLikes]        = useState(() => new Set());
   const [dislikes,     setDislikes]     = useState(() => new Set());
@@ -38,22 +81,17 @@ function ReelCards({ onBack, deckId = 'b1b2' }) {
   const total = cards.length;
   const card  = cards[index];
 
-  const navigate = (dir) => { // 'up' = следующая, 'down' = предыдущая
+  const navigate = (dir) => {
     if (transRef.current) return;
     const nextIdx = indexRef.current + (dir === 'up' ? 1 : -1);
-    if (nextIdx < 0 || nextIdx >= total) {
-      dyRef.current = 0; setDy(0); return;
-    }
+    if (nextIdx < 0 || nextIdx >= total) { dyRef.current = 0; setDy(0); return; }
     transRef.current = true;
     setExitDir(dir);
     setPendingIndex(nextIdx);
-    dyRef.current = 0;
-    setDy(0);
+    dyRef.current = 0; setDy(0);
     setTimeout(() => {
-      setIndex(nextIdx);
-      setFlipped(false);
-      setExitDir(null);
-      setPendingIndex(null);
+      setIndex(nextIdx); setFlipped(false);
+      setExitDir(null); setPendingIndex(null);
       transRef.current = false;
     }, 340);
   };
@@ -101,7 +139,7 @@ function ReelCards({ onBack, deckId = 'b1b2' }) {
     else { dyRef.current = 0; setDy(0); }
   };
 
-  const currentKey = card ? window.cardKey(card) : null;
+  const currentKey = card ? reelKey(card) : null;
   const isLiked    = !!(currentKey && likes.has(currentKey));
   const isDisliked = !!(currentKey && dislikes.has(currentKey));
 
@@ -127,19 +165,14 @@ function ReelCards({ onBack, deckId = 'b1b2' }) {
     });
   };
 
-  const rotY            = flipped ? 180 : 0;
-  // текущая карточка: летит ВВЕРХ при свайпе вверх, ВНИЗ при свайпе вниз
-  const exitTy          = exitDir === 'up' ? '-110vh' : exitDir === 'down' ? '110vh' : `${dy}px`;
-  const currentTransform  = `translateY(${exitTy}) rotateY(${rotY}deg)`;
+  const rotY             = flipped ? 180 : 0;
+  const exitTy           = exitDir === 'up' ? '-110vh' : exitDir === 'down' ? '110vh' : `${dy}px`;
+  const currentTransform = `translateY(${exitTy}) rotateY(${rotY}deg)`;
   const currentTransition = dragging ? 'none' : 'transform 340ms cubic-bezier(.25,.7,.3,1)';
-
-  const renderFaces = (c) => c.type
-    ? <window.PhrasalCardFaces card={c} />
-    : <window.CardFaces card={c} />;
 
   if (!card) return (
     <div className="reel-app">
-      <button className="reel-back-btn" onClick={onBack} aria-label="Назад">
+      <button className="reel-back-btn" onClick={onBack} style={{ position: 'absolute', top: 20, left: 20 }} aria-label="Назад">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 12H5M12 5l-7 7 7 7"/>
         </svg>
@@ -156,33 +189,30 @@ function ReelCards({ onBack, deckId = 'b1b2' }) {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        {/* новая карточка едет снизу (при свайпе вверх) или сверху (при свайпе вниз) */}
         {pendingIndex !== null && (
           <div
             key={'p' + pendingIndex}
             className={"reel-card " + (exitDir === 'up' ? 'enter-bottom' : 'enter-top')}
           >
-            {renderFaces(cards[pendingIndex])}
+            <QuoteCardFaces card={cards[pendingIndex]} />
           </div>
         )}
 
-        {/* текущая карточка — летит в направлении свайпа */}
         <div
           key={'c' + index}
           className={"reel-card current" + (dragging ? ' dragging' : '')}
           style={{ transform: currentTransform, transition: currentTransition }}
         >
-          {renderFaces(card)}
+          <QuoteCardFaces card={card} />
         </div>
 
-        {/* лайки — поверх карточки, внутри scene, вне 3D-слоя */}
         <div className="reel-card-actions">
           <button
             className={"reel-btn" + (isLiked ? " liked" : "")}
             onClick={toggleLike}
             aria-label="Нравится"
           >
-            <svg width="26" height="26" viewBox="0 0 24 24"
+            <svg width="22" height="22" viewBox="0 0 24 24"
               fill={isLiked ? "currentColor" : "none"}
               stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
@@ -195,7 +225,7 @@ function ReelCards({ onBack, deckId = 'b1b2' }) {
             onClick={toggleDislike}
             aria-label="Не нравится"
           >
-            <svg width="26" height="26" viewBox="0 0 24 24"
+            <svg width="22" height="22" viewBox="0 0 24 24"
               fill={isDisliked ? "currentColor" : "none"}
               stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/>
