@@ -1,0 +1,66 @@
+@startuml reels
+!theme plain
+hide empty members
+skinparam classFontSize 12
+
+class reels {
+  _id : ObjectId
+  quote_en : String
+  embedding : Float[]
+  frequency_score : Float
+  social_risk : Boolean
+  adult : Boolean
+  status : pending | published | rejected
+  created_at : DateTime
+  updated_at : DateTime
+}
+
+class Source {
+  show : String
+  type : series | book | podcast | article
+  season : Int  «optional»
+  episode : Int  «optional»
+}
+
+class ReelLocale {
+  context : String
+  quote : String
+}
+
+class Expression {
+  phrase : String
+}
+
+class ExpressionLocale {
+  literal : String
+  explanation : String
+}
+
+class Word {
+  word : String
+  level : A2 | B1 | B2 | C1 | C2
+}
+
+class WordLocale {
+  translation : String
+}
+
+class Tags {
+  domains : String[]  «max 3»
+  emotion : joy | anger | sarcasm | confidence | fear | nostalgia | neutral
+  register : vulgar | slang | colloquial | neutral | formal | archaic
+  type : idiom | phrasal_verb | collocation | term | aphorism | proverb | slang_word
+  cefr : A2 | B1 | B2 | C1 | C2
+  region : american | british | australian | neutral
+  era : contemporary | 20th_century | archaic
+}
+
+reels *-down- Source                                   : source
+reels *-down- Tags                                     : tags
+reels *-right- "ru / fr / de / it / zh" ReelLocale    : locales
+reels *-left- "1..n" Expression                        : expressions[]
+reels *-left- "0..n" Word                              : words[]
+Expression *-- "ru / fr / de / it / zh" ExpressionLocale : locales
+Word       *-- "ru / fr / de / it / zh" WordLocale        : locales
+
+@enduml
