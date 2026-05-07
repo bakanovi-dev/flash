@@ -1,0 +1,33 @@
+@startuml users
+!theme plain
+hide empty members
+skinparam classFontSize 12
+
+class users {
+  _id : ObjectId
+  firebase_uid : String
+  email : String
+  name : String
+  avatar_url : String
+  language : ru | fr | de | it | zh
+  interest_weights : Map<String, Float>
+  onboarding_completed : Boolean
+  age_verified : Boolean
+  created_at : DateTime
+}
+
+class Subscription {
+  plan : free | premium
+  expires_at : DateTime  «nullable»
+}
+
+class Preferences {
+  domains : String[]
+  cefr_target : A2 | B1 | B2 | C1 | C2
+  region : american | british | australian | neutral
+}
+
+users *-down- Subscription : subscription
+users *-down- Preferences  : preferences
+
+@enduml

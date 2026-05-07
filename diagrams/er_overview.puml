@@ -1,0 +1,56 @@
+@startuml er_overview
+!theme plain
+skinparam linetype ortho
+skinparam classFontSize 13
+hide empty members
+
+entity "reels" as R {
+  * _id : ObjectId
+  --
+  quote_en : String
+  source : Source
+  expressions : Expression[]
+  words : Word[]
+  locales : Map<lang, ReelLocale>
+  tags : Tags
+  embedding : Float[]
+  adult : Boolean
+  status : pending | published | rejected
+}
+
+entity "users" as U {
+  * _id : ObjectId
+  --
+  firebase_uid : String
+  email : String
+  language : ru | fr | de | it | zh
+  subscription : Subscription
+  preferences : Preferences
+  interest_weights : Map<String, Float>
+  onboarding_completed : Boolean
+  age_verified : Boolean
+}
+
+entity "saved_cards" as SC {
+  * _id : ObjectId
+  --
+  * user_id : ObjectId <<FK>>
+  * reel_id : ObjectId <<FK>>
+  saved_at : DateTime
+}
+
+entity "interactions" as I {
+  * _id : ObjectId
+  --
+  * user_id : ObjectId <<FK>>
+  * reel_id : ObjectId <<FK>>
+  action : like | dislike | save | skip
+  timestamp : DateTime
+}
+
+U ||--o{ SC : сохраняет
+R ||--o{ SC : "сохранена в"
+U ||--o{ I : совершает
+R ||--o{ I : получает
+
+@enduml

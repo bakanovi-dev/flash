@@ -1,0 +1,21 @@
+@startuml saved_interactions
+!theme plain
+hide empty members
+skinparam classFontSize 12
+
+class saved_cards {
+  _id : ObjectId
+  user_id : ObjectId <<FK>>
+  reel_id : ObjectId <<FK>>
+  saved_at : DateTime
+}
+
+class interactions {
+  _id : ObjectId
+  user_id : ObjectId <<FK>>
+  reel_id : ObjectId <<FK>>
+  action : like | dislike | save | skip
+  timestamp : DateTime
+}
+
+@enduml
