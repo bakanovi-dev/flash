@@ -8,8 +8,8 @@ from config import Config
 from db import reel_exists, save_reel
 from embedder import generate_embedding
 from enricher import enrich_reel
-from extractor import extract_quotes
-from srt_parser import parse_srt
+from extractor import extract_quotes, resolve_speaker
+from srt_parser import parse_srt, wide_context
 from vocabulary import SUPPORTED_LANGUAGES
 
 
@@ -38,10 +38,10 @@ def process_file(srt_path: Path, args: argparse.Namespace, config: Config, index
     if args.season:
         source["season"] = args.season
 
-    windows = parse_srt(srt_path)
+    windows, all_lines = parse_srt(srt_path)
     print(f"  {len(windows)} text windows")
 
-    saved = skipped = errors = 0
+    saved = skipped = errors = resolved = 0
 
     for window in windows:
         try:
@@ -59,6 +59,19 @@ def process_file(srt_path: Path, args: argparse.Namespace, config: Config, index
             if reel_exists(quote_en, config):
                 skipped += 1
                 continue
+
+            # If speaker is uncertain — do a second focused call with wider context
+            if not q.get("speaker_certain", True) or not q.get("speaker"):
+                try:
+                    ctx = wide_context(all_lines, quote_en)
+                    resolved_data = resolve_speaker(quote_en, ctx, args.source, config)
+                    if resolved_data.get("speaker"):
+                        q["speaker"] = resolved_data["speaker"]
+                        q["context_hint"] = resolved_data["context_hint"]
+                        resolved += 1
+                        print(f"  [resolved] {quote_en[:50]} → {q['speaker']}")
+                except Exception as e:
+                    print(f"  [speaker resolve error] {e}", file=sys.stderr)
 
             try:
                 enriched = enrich_reel(q, args.languages, source, config)
@@ -79,7 +92,7 @@ def process_file(srt_path: Path, args: argparse.Namespace, config: Config, index
             saved += 1
             print(f"  + {quote_en[:80]}")
 
-    print(f"  saved={saved}  skipped(dup)={skipped}  errors={errors}")
+    print(f"  saved={saved}  skipped(dup)={skipped}  errors={errors}  speaker_resolved={resolved}")
 
 
 def main():

@@ -20,15 +20,46 @@ Format:
   "quotes": [
     {{
       "quote_en": "exact quote copied from the text above",
-      "speaker": "character name if you can identify them from dialogue style/content, otherwise null",
-      "context_hint": "one sentence describing who says this (use the speaker's name) and the situation"
+      "speaker": "character name if you can identify them, otherwise null",
+      "speaker_certain": true,
+      "context_hint": "one sentence: who says this and the situation"
     }}
   ]
 }}
 
+Set speaker_certain to false if the dialogue window doesn't give enough clues to be sure who is speaking.
 If nothing interesting found, return {{"quotes": []}}. Return only valid JSON."""
 
     result = call_llm(client, config.extraction_model, prompt)
     quotes = result.get("quotes", [])
 
     return [q for q in quotes if isinstance(q, dict) and q.get("quote_en")]
+
+
+def resolve_speaker(quote_en: str, wider_context: str, show: str, config: Config) -> dict:
+    """Second-pass call with expanded context to pin down the speaker.
+    Returns {"speaker": str|None, "context_hint": str}.
+    """
+    client = get_llm_client(config)
+    prompt = f"""You are identifying which character says a line in "{show}".
+
+Line: "{quote_en}"
+
+Surrounding dialogue (wider context):
+{wider_context}
+
+Using the dialogue flow above and your knowledge of {show}, identify who says this line.
+
+Return JSON:
+{{
+  "speaker": "character first name, or null if still unclear",
+  "context_hint": "one sentence: [Name] says this when/because ..."
+}}
+
+Return only valid JSON."""
+
+    result = call_llm(client, config.extraction_model, prompt)
+    return {
+        "speaker": result.get("speaker"),
+        "context_hint": result.get("context_hint", ""),
+    }
