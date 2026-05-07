@@ -14,9 +14,16 @@ def _collection(config: Config):
     return _client[config.db_name]["reels"]
 
 
+def _normalize(quote_en: str) -> str:
+    import re
+    s = quote_en.lower()
+    s = re.sub(r'[.…,;!?"\'\-–—]+', ' ', s)  # strip punctuation
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s
+
+
 def _fingerprint(quote_en: str) -> str:
-    normalized = " ".join(quote_en.lower().split())
-    return hashlib.md5(normalized.encode()).hexdigest()
+    return hashlib.md5(_normalize(quote_en).encode()).hexdigest()
 
 
 def reel_exists(quote_en: str, config: Config) -> bool:
