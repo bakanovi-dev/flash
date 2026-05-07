@@ -12,6 +12,7 @@ def enrich_reel(quote_data: dict, languages: list[str], source: dict, config: Co
 
     quote_en = quote_data["quote_en"]
     context_hint = quote_data.get("context_hint", "")
+    speaker = quote_data.get("speaker")
 
     show = source.get("show", "")
     src_type = source.get("type", "series")
@@ -44,9 +45,12 @@ def enrich_reel(quote_data: dict, languages: list[str], source: dict, config: Co
     prompt = f"""You are an English language learning content creator. Create educational flashcard content for this quote.
 
 Quote: "{quote_en}"
+Speaker: {speaker if speaker else "unknown — infer from dialogue style and your knowledge of the show"}
 Context: {context_hint}
 Source: {source_str}
 Languages to generate: {", ".join(languages)}
+
+Always use the character's actual name in the context description. Never write "character", "hero", "protagonist" — use names like "Sheldon", "Leonard", etc.
 
 Return a JSON object with this exact structure:
 {{

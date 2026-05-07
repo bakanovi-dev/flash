@@ -20,7 +20,8 @@ Format:
   "quotes": [
     {{
       "quote_en": "exact quote copied from the text above",
-      "context_hint": "one sentence: who says this and the situation"
+      "speaker": "character name if you can identify them from dialogue style/content, otherwise null",
+      "context_hint": "one sentence describing who says this (use the speaker's name) and the situation"
     }}
   ]
 }}
