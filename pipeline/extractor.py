@@ -14,6 +14,7 @@ Return a JSON object with key "quotes" containing 0–3 quotes that:
 - Contain idioms, phrasal verbs, collocations, or interesting vocabulary
 - Are complete sentences (1–2 sentences max), taken verbatim from the text
 - Would be interesting for B1–C2 English learners
+- Are primarily in English — skip lines that are mostly in another language (French, Spanish, etc.)
 
 Format:
 {{
