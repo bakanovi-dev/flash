@@ -8,14 +8,14 @@
 set -e
 
 SERVER=${1:-"root@194.135.119.74"}
-SSH_KEY=${SSH_KEY:-"$HOME/.ssh/id_ed25519_server"}
+SSH_KEY=${SSH_KEY:-"$HOME/.ssh/server_key"}
 SSH="ssh -i $SSH_KEY"
 DB=flashcards_deepseek
 LOCAL_CONTAINER=mongodb
 REMOTE_CONTAINER=mongodb
 
 echo "==> Waiting for MongoDB on $SERVER to be ready..."
-until $SSH "$SERVER" "docker exec $REMOTE_CONTAINER mongosh --quiet --eval 'db.runCommand({ping:1})'" >/dev/null 2>&1; do
+until $SSH "$SERVER" "docker exec $REMOTE_CONTAINER mongo --quiet --eval 'db.runCommand({ping:1})'" >/dev/null 2>&1; do
   echo "   ...still starting, retrying in 3s"
   sleep 3
 done
