@@ -20,4 +20,6 @@ jobs:
             cd /opt/flash || git clone https://github.com/bakanovi-dev/flash.git /opt/flash
             cd /opt/flash
             git pull origin main
+            docker stop flash 2>/dev/null || true
+            docker rm flash 2>/dev/null || true
             docker compose up -d --build
