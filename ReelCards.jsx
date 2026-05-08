@@ -1,4 +1,8 @@
-const { useState, useRef, useMemo, useEffect } = React;
+const { useState, useRef, useEffect } = React;
+
+const BATCH_SIZE = 15;
+const PRELOAD_AT = 5;
+const REPEAT_WINDOW = 100;
 
 function speak(text) {
   if (!window.speechSynthesis) return;
@@ -84,10 +88,19 @@ function QuoteCardFaces({ card }) {
 
 function reelKey(card) { return 'reel::' + card.id; }
 
-function ReelCards({ onBack }) {
-  const cards = useMemo(() => window.REEL_DECK || [], []);
+function fireEvent(cardId, event) {
+  const base = window.API_BASE || '';
+  fetch(`${base}/api/v1/events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ card_id: cardId, event }),
+  }).catch(() => {});
+}
 
+function ReelCards({ onBack }) {
+  const [deck,         setDeck]         = useState([]);
   const [index,        setIndex]        = useState(0);
+  const [loading,      setLoading]      = useState(false);
   const [flipped,      setFlipped]      = useState(false);
   const [dy,           setDy]           = useState(0);
   const [dragging,     setDragging]     = useState(false);
@@ -96,26 +109,105 @@ function ReelCards({ onBack }) {
   const [likes,        setLikes]        = useState(() => new Set());
   const [dislikes,     setDislikes]     = useState(() => new Set());
 
-  const dragRef  = useRef({ id: null, startY: 0, startTime: 0, moved: false });
-  const dyRef    = useRef(0);
-  const indexRef = useRef(0);
-  const transRef = useRef(false);
+  const dragRef      = useRef({ id: null, startY: 0, startTime: 0, moved: false });
+  const dyRef        = useRef(0);
+  const indexRef     = useRef(0);
+  const transRef     = useRef(false);
+  const deckRef      = useRef([]);
+  const seenRef      = useRef([]);
+  const fetchingRef  = useRef(false);
+  const flippedRef   = useRef(false);
+  const wasFlippedRef = useRef(false);
 
   indexRef.current = index;
+  deckRef.current  = deck;
 
-  const total = cards.length;
-  const card  = cards[index];
+  const fetchBatch = (retryWithReset = false) => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+    setLoading(true);
+
+    if (retryWithReset) seenRef.current = [];
+
+    const seen = seenRef.current;
+    const excludeSet = [...new Set([
+      ...seen.slice(-REPEAT_WINDOW),
+      ...deckRef.current.map(c => c.id),
+    ])];
+
+    const params = new URLSearchParams({
+      limit: String(BATCH_SIZE),
+      lang: 'ru',
+      domain: 'entertainment.humor',
+    });
+    excludeSet.forEach(id => params.append('exclude_ids', id));
+
+    const base = window.API_BASE || '';
+    fetch(`${base}/api/v1/feed?${params}`)
+      .then(r => r.json())
+      .then(data => {
+        fetchingRef.current = false;
+        setLoading(false);
+        if (data.items && data.items.length > 0) {
+          const cards = data.items.map(c => ({ ...c, quote_ru: c.quote_translated }));
+          setDeck(prev => {
+            const updated = [...prev, ...cards];
+            deckRef.current = updated;
+            return updated;
+          });
+        } else if (!retryWithReset && seen.length > 0) {
+          // All cards seen within the window — reset and retry
+          fetchBatch(true);
+        }
+      })
+      .catch(e => {
+        console.error('Feed fetch error:', e);
+        fetchingRef.current = false;
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => { fetchBatch(); }, []);
+
+  useEffect(() => {
+    if (deckRef.current.length - index <= PRELOAD_AT) {
+      fetchBatch();
+    }
+  }, [index, deck.length]);
+
+  const doFlip = () => {
+    const next = !flippedRef.current;
+    flippedRef.current = next;
+    setFlipped(next);
+    if (next && !wasFlippedRef.current) {
+      wasFlippedRef.current = true;
+      const curCard = deckRef.current[indexRef.current];
+      if (curCard) fireEvent(curCard.id, 'flip');
+    }
+  };
 
   const navigate = (dir) => {
     if (transRef.current) return;
-    const nextIdx = indexRef.current + (dir === 'up' ? 1 : -1);
-    if (nextIdx < 0 || nextIdx >= total) { dyRef.current = 0; setDy(0); return; }
+    const curIdx  = indexRef.current;
+    const nextIdx = curIdx + (dir === 'up' ? 1 : -1);
+    if (nextIdx < 0 || nextIdx >= deckRef.current.length) { dyRef.current = 0; setDy(0); return; }
+
+    if (dir === 'up') {
+      const curCard = deckRef.current[curIdx];
+      if (curCard) {
+        seenRef.current = [...seenRef.current, curCard.id];
+        if (!wasFlippedRef.current) fireEvent(curCard.id, 'skip');
+      }
+    }
+
     transRef.current = true;
     setExitDir(dir);
     setPendingIndex(nextIdx);
     dyRef.current = 0; setDy(0);
     setTimeout(() => {
-      setIndex(nextIdx); setFlipped(false);
+      setIndex(nextIdx);
+      setFlipped(false); flippedRef.current = false;
+      wasFlippedRef.current = false;
       setExitDir(null); setPendingIndex(null);
       transRef.current = false;
     }, 340);
@@ -123,7 +215,7 @@ function ReelCards({ onBack }) {
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === ' ')              { e.preventDefault(); setFlipped(f => !f); }
+      if (e.key === ' ')              { e.preventDefault(); doFlip(); }
       else if (e.key === 'ArrowUp')   navigate('up');
       else if (e.key === 'ArrowDown') navigate('down');
     };
@@ -155,7 +247,7 @@ function ReelCards({ onBack }) {
     const elapsed  = Date.now() - ds.startTime;
     dragRef.current = { id: null, startY: 0, startTime: 0, moved: false };
     setDragging(false);
-    if (!wasMoved) { setFlipped(f => !f); return; }
+    if (!wasMoved) { doFlip(); return; }
     const cur  = dyRef.current;
     const vel  = Math.abs(cur) / Math.max(elapsed, 1);
     const fast = vel > 0.3 && Math.abs(cur) > 30;
@@ -164,44 +256,59 @@ function ReelCards({ onBack }) {
     else { dyRef.current = 0; setDy(0); }
   };
 
+  const card       = deck[index];
   const currentKey = card ? reelKey(card) : null;
   const isLiked    = !!(currentKey && likes.has(currentKey));
   const isDisliked = !!(currentKey && dislikes.has(currentKey));
 
   const toggleLike = (e) => {
     e.stopPropagation();
-    if (!currentKey) return;
+    if (!currentKey || !card) return;
     setLikes(prev => {
       const s = new Set(prev);
-      if (s.has(currentKey)) s.delete(currentKey);
-      else { s.add(currentKey); setDislikes(d => { const nd = new Set(d); nd.delete(currentKey); return nd; }); }
+      if (s.has(currentKey)) {
+        s.delete(currentKey);
+      } else {
+        s.add(currentKey);
+        fireEvent(card.id, 'like');
+        setDislikes(d => { const nd = new Set(d); nd.delete(currentKey); return nd; });
+      }
       return s;
     });
   };
 
   const toggleDislike = (e) => {
     e.stopPropagation();
-    if (!currentKey) return;
+    if (!currentKey || !card) return;
     setDislikes(prev => {
       const s = new Set(prev);
-      if (s.has(currentKey)) s.delete(currentKey);
-      else { s.add(currentKey); setLikes(l => { const nl = new Set(l); nl.delete(currentKey); return nl; }); }
+      if (s.has(currentKey)) {
+        s.delete(currentKey);
+      } else {
+        s.add(currentKey);
+        fireEvent(card.id, 'dislike');
+        setLikes(l => { const nl = new Set(l); nl.delete(currentKey); return nl; });
+      }
       return s;
     });
   };
 
-  const rotY             = flipped ? 180 : 0;
-  const exitTy           = exitDir === 'up' ? '-110vh' : exitDir === 'down' ? '110vh' : `${dy}px`;
-  const currentTransform = `translateY(${exitTy}) rotateY(${rotY}deg)`;
+  const rotY              = flipped ? 180 : 0;
+  const exitTy            = exitDir === 'up' ? '-110vh' : exitDir === 'down' ? '110vh' : `${dy}px`;
+  const currentTransform  = `translateY(${exitTy}) rotateY(${rotY}deg)`;
   const currentTransition = dragging ? 'none' : 'transform 340ms cubic-bezier(.25,.7,.3,1)';
 
   if (!card) return (
-    <div className="reel-app">
+    <div className="reel-app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <button className="reel-back-btn" onClick={onBack} style={{ position: 'absolute', top: 20, left: 20 }} aria-label="Назад">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 12H5M12 5l-7 7 7 7"/>
         </svg>
       </button>
+      {loading
+        ? <div style={{ color: 'var(--muted)', fontSize: 15 }}>Загружаем карточки...</div>
+        : <div style={{ color: 'var(--muted)', fontSize: 15 }}>Нет карточек</div>
+      }
     </div>
   );
 
@@ -219,7 +326,7 @@ function ReelCards({ onBack }) {
             key={'p' + pendingIndex}
             className={"reel-card " + (exitDir === 'up' ? 'enter-bottom' : 'enter-top')}
           >
-            <QuoteCardFaces card={cards[pendingIndex]} />
+            <QuoteCardFaces card={deck[pendingIndex]} />
           </div>
         )}
 
