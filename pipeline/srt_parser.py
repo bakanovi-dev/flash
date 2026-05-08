@@ -1,6 +1,18 @@
 import re
 from pathlib import Path
 
+
+def _normalize_case(text: str) -> str:
+    letters = [c for c in text if c.isalpha()]
+    if not letters:
+        return text
+    if sum(1 for c in letters if c.isupper()) / len(letters) < 0.6:
+        return text
+    text = text.lower()
+    text = re.sub(r'((?:^|(?<=[.!?]))\s*)([a-z])', lambda m: m.group(1) + m.group(2).upper(), text)
+    text = re.sub(r'\bi\b', 'I', text)
+    return text
+
 WINDOW_SIZE = 20
 STEP = 15
 SPEAKER_RADIUS = 40  # lines of context for speaker disambiguation
@@ -20,7 +32,7 @@ def _clean_lines(path: Path) -> list[str]:
         text = re.sub(r"<[^>]+>", "", text)
         text = re.sub(r"\{[^}]+\}", "", text)
         text = re.sub(r"\[[^\]]+\]", "", text)
-        text = text.strip()
+        text = _normalize_case(text.strip())
         if text and not re.fullmatch(r"\d+", text):
             lines.append(text)
     return lines
