@@ -20,4 +20,10 @@ jobs:
             cd /opt/flash || git clone https://github.com/bakanovi-dev/flash.git /opt/flash
             cd /opt/flash
             git pull origin main
-            docker compose up -d --build
+            docker stop flash 2>/dev/null || true
+            docker rm flash 2>/dev/null || true
+            if docker compose version > /dev/null 2>&1; then
+              docker compose up -d --build
+            else
+              docker-compose up -d --build
+            fi
