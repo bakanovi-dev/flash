@@ -1,5 +1,6 @@
 import json
 import time
+import concurrent.futures
 from openai import OpenAI
 
 
@@ -10,23 +11,36 @@ def get_llm_client(config) -> OpenAI:
     return OpenAI(**kwargs)
 
 
-def call_llm(client: OpenAI, model: str, prompt: str, retries: int = 3) -> dict:
-    """Call OpenAI chat completion and return parsed JSON. Retries on failure."""
+def _api_call(client: OpenAI, model: str, messages: list) -> dict:
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        response_format={"type": "json_object"},
+        temperature=0,
+    )
+    return json.loads(response.choices[0].message.content)
+
+
+def call_llm(client: OpenAI, model: str, prompt: str, retries: int = 3, timeout: int = 45) -> dict:
+    """Call LLM and return parsed JSON. Thread-per-attempt so hung connections are abandoned."""
     messages = [{"role": "user", "content": prompt}]
     last_error = None
 
     for attempt in range(retries):
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        future = executor.submit(_api_call, client, model, messages)
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                response_format={"type": "json_object"},
-                temperature=0.3,
-            )
-            return json.loads(response.choices[0].message.content)
+            return future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError:
+            last_error = TimeoutError(f"timed out after {timeout}s")
+            print(f" [timeout, retry {attempt + 1}/{retries}]", end="", flush=True)
         except Exception as e:
             last_error = e
-            if attempt < retries - 1:
-                time.sleep(2 ** attempt)
+            print(f" [error {type(e).__name__}, retry {attempt + 1}/{retries}]", end="", flush=True)
+        finally:
+            executor.shutdown(wait=False)  # abandon hung thread, don't block
+
+        if attempt < retries - 1:
+            time.sleep(2 ** attempt)
 
     raise RuntimeError(f"LLM call failed after {retries} attempts: {last_error}")

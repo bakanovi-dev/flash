@@ -8,8 +8,8 @@ from config import Config
 from db import reel_exists, save_reel
 from embedder import generate_embedding
 from enricher import enrich_reel
-from extractor import extract_quotes, resolve_speaker
-from srt_parser import parse_srt, wide_context
+from extractor import extract_quotes
+from srt_parser import parse_srt, parse_script
 from vocabulary import SUPPORTED_LANGUAGES
 
 
@@ -38,15 +38,22 @@ def process_file(srt_path: Path, args: argparse.Namespace, config: Config, index
     if args.season:
         source["season"] = args.season
 
-    windows, all_lines = parse_srt(srt_path)
-    print(f"  {len(windows)} text windows")
+    has_labels = srt_path.suffix.lower() == ".txt"
+    if has_labels:
+        windows, _ = parse_script(srt_path)
+    else:
+        windows, _ = parse_srt(srt_path)
+    print(f"  {len(windows)} text windows {'(script with speaker labels)' if has_labels else ''}")
 
-    saved = skipped = errors = resolved = 0
+    saved = skipped = errors = 0
 
-    for window in windows:
+    for wi, window in enumerate(windows, 1):
+        print(f"  window {wi}/{len(windows)} ...", end=" ", flush=True)
         try:
-            quotes = extract_quotes(window, config)
+            quotes = extract_quotes(window, config, show=args.source, characters=args.characters, has_labels=has_labels)
+            print(f"{len(quotes)} quote(s)")
         except Exception as e:
+            print(f"ERROR")
             print(f"  [extraction error] {e}", file=sys.stderr)
             errors += 1
             continue
@@ -60,18 +67,9 @@ def process_file(srt_path: Path, args: argparse.Namespace, config: Config, index
                 skipped += 1
                 continue
 
-            # If speaker is uncertain — do a second focused call with wider context
-            if not q.get("speaker_certain", True) or not q.get("speaker"):
-                try:
-                    ctx = wide_context(all_lines, quote_en)
-                    resolved_data = resolve_speaker(quote_en, ctx, args.source, config)
-                    if resolved_data.get("speaker"):
-                        q["speaker"] = resolved_data["speaker"]
-                        q["context_hint"] = resolved_data["context_hint"]
-                        resolved += 1
-                        print(f"  [resolved] {quote_en[:50]} → {q['speaker']}")
-                except Exception as e:
-                    print(f"  [speaker resolve error] {e}", file=sys.stderr)
+            # If speaker uncertain — leave as null, enrich will handle it
+            if not q.get("speaker_certain", True):
+                q["speaker"] = None
 
             try:
                 enriched = enrich_reel(q, args.languages, source, config)
@@ -88,11 +86,14 @@ def process_file(srt_path: Path, args: argparse.Namespace, config: Config, index
                 except Exception as e:
                     print(f"  [embedding error] {e}", file=sys.stderr)
 
+            enriched["speaker"] = q.get("speaker")
+            enriched["speaker_certain"] = q.get("speaker_certain", True)
             save_reel(enriched, source, quote_en, config)
             saved += 1
-            print(f"  + {quote_en[:80]}")
+            speaker_label = q.get("speaker") or "?"
+            print(f"  + [{speaker_label}] {quote_en[:75]}")
 
-    print(f"  saved={saved}  skipped(dup)={skipped}  errors={errors}  speaker_resolved={resolved}")
+    print(f"  saved={saved}  skipped(dup)={skipped}  errors={errors}")
 
 
 def main():
@@ -109,6 +110,12 @@ def main():
         help="Comma-separated target languages (default: ru). Supported: ru, fr, de, it, zh",
     )
     parser.add_argument(
+        "--characters",
+        default=None,
+        type=lambda s: [c.strip() for c in s.split(",")],
+        help="Comma-separated list of character names (e.g. 'Sheldon,Leonard,Penny')",
+    )
+    parser.add_argument(
         "--embedding",
         action="store_true",
         help="Generate embeddings via OpenAI (Phase 2, off by default)",
@@ -123,12 +130,15 @@ def main():
 
     config = Config()
 
-    srt_files = sorted(Path(args.dir).glob("*.srt"))
+    srt_files = sorted([
+        *Path(args.dir).glob("*.srt"),
+        *Path(args.dir).glob("*.txt"),
+    ])
     if not srt_files:
-        print(f"No .srt files found in: {args.dir}")
+        print(f"No .srt or .txt files found in: {args.dir}")
         sys.exit(1)
 
-    print(f"Found {len(srt_files)} .srt file(s) in {args.dir}")
+    print(f"Found {len(srt_files)} file(s) in {args.dir}")
     print(f"Languages: {args.languages}  |  Embeddings: {args.embedding}")
 
     for i, srt_path in enumerate(srt_files, start=1):

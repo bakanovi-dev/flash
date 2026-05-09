@@ -67,8 +67,8 @@ def _to_card(r: dict, lang: str) -> ReelCard:
 
 @app.get("/api/v1/feed", response_model=FeedResponse)
 async def get_feed(
-    limit: int = Query(default=20, ge=1, le=100),
-    exclude_ids: list[str] = Query(default=[]),
+    limit: int = Query(default=15, ge=1, le=100),
+    cursor: float | None = Query(default=None),
     lang: str = Query(default="ru"),
     domain: str | None = Query(default=None),
     cefr: str | None = Query(default=None),
@@ -76,12 +76,7 @@ async def get_feed(
     db = get_db()
 
     query: dict = {"status": {"$in": ["published", "pending"]}}
-
-    if exclude_ids:
-        try:
-            query["_id"] = {"$nin": [ObjectId(i) for i in exclude_ids if ObjectId.is_valid(i)]}
-        except Exception:
-            pass
+    query["rand"] = {"$gt": cursor} if cursor is not None else {"$gte": 0}
 
     if domain:
         query["tags.domains"] = domain
@@ -89,17 +84,15 @@ async def get_feed(
     if cefr:
         query["tags.cefr"] = cefr
 
-    total = db.reels.count_documents(query)
+    reels = list(db.reels.find(query).sort("rand", 1).limit(limit))
 
-    pipeline = [
-        {"$match": query},
-        {"$sample": {"size": limit}},
-    ]
-    reels = list(db.reels.aggregate(pipeline))
+    next_cursor = reels[-1]["rand"] if reels else None
+    has_more = len(reels) == limit
 
     return FeedResponse(
         items=[_to_card(r, lang) for r in reels],
-        total=total,
+        next_cursor=next_cursor,
+        has_more=has_more,
     )
 
 

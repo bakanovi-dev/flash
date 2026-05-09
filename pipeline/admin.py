@@ -24,7 +24,7 @@ def get_db():
 
 db = get_db()
 
-def load_reels(status_filter=None, source_filter=None, domain_filter=None):
+def load_reels(status_filter=None, source_filter=None, domain_filter=None, no_speaker=False):
     q = {}
     if status_filter and status_filter != "all":
         q["status"] = status_filter
@@ -32,6 +32,8 @@ def load_reels(status_filter=None, source_filter=None, domain_filter=None):
         q["source.show"] = source_filter
     if domain_filter and domain_filter != "all":
         q["tags.domains"] = domain_filter
+    if no_speaker:
+        q["speaker"] = None
     return list(db.reels.find(q).sort("created_at", -1))
 
 def load_reel(reel_id):
@@ -89,6 +91,8 @@ with st.sidebar:
     top_domains = ["all"] + sorted(set(d.split(".")[0] for d in DOMAINS))
     filter_domain = st.selectbox("Domain", top_domains)
 
+    filter_no_speaker = st.checkbox("Без персонажа")
+
     if st.button("↩ Back to list", use_container_width=True):
         st.session_state.view = "list"
         st.session_state.current_id = None
@@ -107,7 +111,7 @@ def episode_label(source):
 # ── LIST VIEW ────────────────────────────────────────────────────────────────
 
 if st.session_state.view == "list":
-    reels = load_reels(filter_status, filter_source, filter_domain if filter_domain != "all" else None)
+    reels = load_reels(filter_status, filter_source, filter_domain if filter_domain != "all" else None, filter_no_speaker)
 
     st.subheader(f"Reels — {len(reels)} found")
 
@@ -145,14 +149,14 @@ if st.session_state.view == "list":
     st.divider()
 
     # Table header
-    hcols = st.columns([0.5, 4, 2, 1, 2, 1.5, 1.5])
-    for col, label in zip(hcols, ["", "Quote", "Source", "CEFR", "Domains", "Status", "Actions"]):
+    hcols = st.columns([0.5, 3.5, 1.5, 2, 1, 2, 1.5, 1.5])
+    for col, label in zip(hcols, ["", "Quote", "Speaker", "Source", "CEFR", "Domains", "Status", "Actions"]):
         col.markdown(f"**{label}**")
     st.divider()
 
     for reel in reels:
         rid = str(reel["_id"])
-        cols = st.columns([0.5, 4, 2, 1, 2, 1.5, 1.5])
+        cols = st.columns([0.5, 3.5, 1.5, 2, 1, 2, 1.5, 1.5])
 
         checked = cols[0].checkbox("", key=f"chk_{rid}", value=rid in st.session_state.selected, label_visibility="collapsed")
         if checked:
@@ -162,16 +166,20 @@ if st.session_state.view == "list":
 
         quote_short = reel.get("quote_en", "")[:80] + ("…" if len(reel.get("quote_en", "")) > 80 else "")
         cols[1].write(quote_short)
-        cols[2].write(episode_label(reel.get("source", {})))
-        cols[3].write(reel.get("tags", {}).get("cefr", "—"))
+
+        speaker = reel.get("speaker")
+        cols[2].markdown(f"`{speaker}`" if speaker else "❓")
+
+        cols[3].write(episode_label(reel.get("source", {})))
+        cols[4].write(reel.get("tags", {}).get("cefr", "—"))
         domains = reel.get("tags", {}).get("domains", [])
-        cols[4].write(", ".join(domains[:2]))
+        cols[5].write(", ".join(domains[:2]))
 
         status = reel.get("status", "pending")
         status_badge = {"pending": "🟡 pending", "published": "🟢 published", "rejected": "🔴 rejected"}.get(status, status)
-        cols[5].write(status_badge)
+        cols[6].write(status_badge)
 
-        with cols[6]:
+        with cols[7]:
             bc1, bc2 = st.columns(2)
             if bc1.button("View", key=f"view_{rid}", use_container_width=True):
                 st.session_state.current_id = rid
@@ -203,6 +211,12 @@ elif st.session_state.view == "detail" and st.session_state.current_id:
     # Header
     st.markdown(f"### {episode_label(reel.get('source', {}))}")
     status = reel.get("status", "pending")
+    speaker = reel.get("speaker")
+    speaker_certain = reel.get("speaker_certain", True)
+    if speaker:
+        st.markdown(f"**Speaker:** `{speaker}`" + (" *(uncertain)*" if not speaker_certain else ""))
+    else:
+        st.warning("Speaker неизвестен")
     st.markdown(f"**Status:** `{status}`")
 
     # Action buttons
