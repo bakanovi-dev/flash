@@ -1,3 +1,4 @@
+import random
 from config import Config
 from llm_utils import call_llm, get_llm_client
 from vocabulary import (
@@ -50,7 +51,7 @@ Context: {context_hint}
 Source: {source_str}
 Languages to generate: {", ".join(languages)}
 
-Always use the character's actual name in the context description. Never write "character", "hero", "protagonist" — use names like "Sheldon", "Leonard", etc.
+In the context description, use the actual character name from the Speaker field above as the subject (e.g. "Sheldon says this when...", "Leonard asks..."). If the speaker is unknown, use "a character".
 
 Return a JSON object with this exact structure:
 {{

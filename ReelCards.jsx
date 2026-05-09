@@ -114,7 +114,7 @@ function ReelCards({ onBack }) {
   const indexRef     = useRef(0);
   const transRef     = useRef(false);
   const deckRef      = useRef([]);
-  const seenRef      = useRef([]);
+  const cursorRef    = useRef(null);
   const fetchingRef  = useRef(false);
   const flippedRef   = useRef(false);
   const wasFlippedRef = useRef(false);
@@ -122,25 +122,17 @@ function ReelCards({ onBack }) {
   indexRef.current = index;
   deckRef.current  = deck;
 
-  const fetchBatch = (retryWithReset = false) => {
+  const fetchBatch = () => {
     if (fetchingRef.current) return;
     fetchingRef.current = true;
     setLoading(true);
-
-    if (retryWithReset) seenRef.current = [];
-
-    const seen = seenRef.current;
-    const excludeSet = [...new Set([
-      ...seen.slice(-REPEAT_WINDOW),
-      ...deckRef.current.map(c => c.id),
-    ])];
 
     const params = new URLSearchParams({
       limit: String(BATCH_SIZE),
       lang: 'ru',
       domain: 'entertainment.humor',
     });
-    excludeSet.forEach(id => params.append('exclude_ids', id));
+    if (cursorRef.current !== null) params.set('cursor', cursorRef.current);
 
     const base = window.API_BASE || '';
     fetch(`${base}/api/v1/feed?${params}`)
@@ -149,15 +141,13 @@ function ReelCards({ onBack }) {
         fetchingRef.current = false;
         setLoading(false);
         if (data.items && data.items.length > 0) {
+          cursorRef.current = data.has_more ? data.next_cursor : null;
           const cards = data.items.map(c => ({ ...c, quote_ru: c.quote_translated }));
           setDeck(prev => {
             const updated = [...prev, ...cards];
             deckRef.current = updated;
             return updated;
           });
-        } else if (!retryWithReset && seen.length > 0) {
-          // All cards seen within the window — reset and retry
-          fetchBatch(true);
         }
       })
       .catch(e => {
@@ -194,10 +184,7 @@ function ReelCards({ onBack }) {
 
     if (dir === 'up') {
       const curCard = deckRef.current[curIdx];
-      if (curCard) {
-        seenRef.current = [...seenRef.current, curCard.id];
-        if (!wasFlippedRef.current) fireEvent(curCard.id, 'skip');
-      }
+      if (curCard && !wasFlippedRef.current) fireEvent(curCard.id, 'skip');
     }
 
     transRef.current = true;

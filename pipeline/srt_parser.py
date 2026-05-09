@@ -51,6 +51,25 @@ def parse_srt(path: Path) -> tuple[list[str], list[str]]:
     return windows, lines
 
 
+def parse_script(path: Path) -> tuple[list[str], list[str]]:
+    """Parse a script txt file with 'CHARACTER: dialogue' format.
+    Returns (windows, all_lines) — same shape as parse_srt.
+    """
+    content = path.read_text(encoding="utf-8", errors="replace")
+    lines = []
+    for line in content.splitlines():
+        line = line.strip()
+        if not line or line.startswith("(") or line.lower().startswith("scene:"):
+            continue
+        lines.append(line)
+    windows = []
+    for i in range(0, len(lines), STEP):
+        chunk = lines[i : i + WINDOW_SIZE]
+        if len(chunk) >= 3:
+            windows.append("\n".join(chunk))
+    return windows, lines
+
+
 def wide_context(all_lines: list[str], quote_en: str, radius: int = SPEAKER_RADIUS) -> str:
     """Return ~radius lines before and after the quote for speaker disambiguation."""
     # find the line(s) that are part of this quote

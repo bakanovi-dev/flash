@@ -1,11 +1,27 @@
+import random
 from config import Config
 from llm_utils import call_llm, get_llm_client
 
 
-def extract_quotes(window: str, config: Config) -> list[dict]:
+def extract_quotes(window: str, config: Config, show: str = "", characters: list[str] | None = None, has_labels: bool = False) -> list[dict]:
     client = get_llm_client(config)
 
-    prompt = f"""Analyze this English subtitle text and find quotes worth studying for language learners.
+    show_line = f'Show: "{show}"' if show else ""
+    characters_line = f"Known characters: {', '.join(characters)}" if characters else ""
+
+    if has_labels:
+        speaker_instructions = """The text has explicit speaker labels in format "NAME: dialogue".
+Use the label directly — set speaker to that name and speaker_certain=true."""
+    else:
+        speaker_instructions = f"""For each quote, identify the speaker by following these steps:
+1. Read the dialogue flow carefully — who is talking to whom, what came before and after
+2. {"Use the known characters list and your knowledge of " + show if characters else "Use your knowledge of " + (show or "the show")} to match the voice/style
+3. Set speaker_certain=true ONLY if the dialogue makes it unambiguous — wrong attribution is worse than null"""
+
+    prompt = f"""Analyze this English text and find quotes worth studying for language learners.
+
+{show_line}
+{characters_line}
 
 Text:
 {window}
@@ -16,24 +32,25 @@ Return a JSON object with key "quotes" containing 0–3 quotes that:
 - Would be interesting for B1–C2 English learners
 - Are primarily in English — skip lines that are mostly in another language (French, Spanish, etc.)
 
+{speaker_instructions}
+
 Format:
 {{
   "quotes": [
     {{
       "quote_en": "exact quote copied from the text above",
-      "speaker": "character name if you can identify them, otherwise null",
+      "speaker": "character first name if certain, otherwise null",
       "speaker_certain": true,
-      "context_hint": "one sentence: who says this and the situation"
+      "context_hint": "one sentence: the situation — use the character's actual name as the subject (e.g. 'Sheldon says this when...')"
     }}
   ]
 }}
 
-Set speaker_certain to false if the dialogue window doesn't give enough clues to be sure who is speaking.
+Set speaker_certain to false if there is any doubt about who is speaking.
 If nothing interesting found, return {{"quotes": []}}. Return only valid JSON."""
 
     result = call_llm(client, config.extraction_model, prompt)
     quotes = result.get("quotes", [])
-
     return [q for q in quotes if isinstance(q, dict) and q.get("quote_en")]
 
 

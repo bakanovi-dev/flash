@@ -53,4 +53,5 @@ class ReelCard(BaseModel):
 
 class FeedResponse(BaseModel):
     items: list[ReelCard]
-    total: int
+    next_cursor: float | None
+    has_more: bool

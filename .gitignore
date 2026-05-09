@@ -52,3 +52,6 @@ pipeline/.env
 *.mov
 *.wmv
 sub 
+sub2
+sub3
+bbt_transcripts
