@@ -3,6 +3,7 @@ const { useState, useRef, useEffect } = React;
 const BATCH_SIZE = 15;
 const PRELOAD_AT = 5;
 const REPEAT_WINDOW = 100;
+const CURRENT_USER_ID = '1';
 
 function speak(text) {
   if (!window.speechSynthesis) return;
@@ -93,7 +94,7 @@ function fireEvent(cardId, event) {
   fetch(`${base}/api/v1/events`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ card_id: cardId, event }),
+    body: JSON.stringify({ card_id: cardId, event, user_id: CURRENT_USER_ID }),
   }).catch(() => {});
 }
 
@@ -115,6 +116,7 @@ function ReelCards({ onBack }) {
   const transRef     = useRef(false);
   const deckRef      = useRef([]);
   const cursorRef    = useRef(null);
+  const hasMoreRef   = useRef(true);
   const fetchingRef  = useRef(false);
   const flippedRef   = useRef(false);
   const wasFlippedRef = useRef(false);
@@ -124,6 +126,7 @@ function ReelCards({ onBack }) {
 
   const fetchBatch = () => {
     if (fetchingRef.current) return;
+    if (!hasMoreRef.current && deckRef.current.length > 0) return;
     fetchingRef.current = true;
     setLoading(true);
 
@@ -131,6 +134,7 @@ function ReelCards({ onBack }) {
       limit: String(BATCH_SIZE),
       lang: 'ru',
       domain: 'entertainment.humor',
+      user_id: CURRENT_USER_ID,
     });
     if (cursorRef.current !== null) params.set('cursor', cursorRef.current);
 
@@ -140,11 +144,14 @@ function ReelCards({ onBack }) {
       .then(data => {
         fetchingRef.current = false;
         setLoading(false);
+        hasMoreRef.current = !!data.has_more;
+        cursorRef.current = hasMoreRef.current ? data.next_cursor : null;
+
         if (data.items && data.items.length > 0) {
-          cursorRef.current = data.has_more ? data.next_cursor : null;
           const cards = data.items.map(c => ({ ...c, quote_ru: c.quote_translated }));
           setDeck(prev => {
-            const updated = [...prev, ...cards];
+            const seen = new Set(prev.map(c => c.id));
+            const updated = [...prev, ...cards.filter(c => !seen.has(c.id))];
             deckRef.current = updated;
             return updated;
           });

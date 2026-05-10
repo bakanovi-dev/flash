@@ -13,6 +13,7 @@ class EventType(str, Enum):
 class EventIn(BaseModel):
     card_id: str
     event: EventType
+    user_id: str = "1"
 
 
 class Expression(BaseModel):
