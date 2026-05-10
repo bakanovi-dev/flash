@@ -72,11 +72,15 @@ async def get_feed(
     lang: str = Query(default="ru"),
     domain: str | None = Query(default=None),
     cefr: str | None = Query(default=None),
+    user_id: str = Query(default="1"),
 ):
     db = get_db()
 
+    state = db.feed_state.find_one({"user_id": user_id}, {"cursor": 1})
+    start_cursor = cursor if cursor is not None else (state or {}).get("cursor")
+
     query: dict = {"status": {"$in": ["published", "pending"]}}
-    query["rand"] = {"$gt": cursor} if cursor is not None else {"$gte": 0}
+    query["rand"] = {"$gt": start_cursor} if start_cursor is not None else {"$gte": 0}
 
     if domain:
         query["tags.domains"] = domain
@@ -117,11 +121,29 @@ async def get_reel(
 @app.post("/api/v1/events")
 async def post_event(body: EventIn):
     db = get_db()
+    now = datetime.now(timezone.utc)
+    card_id = ObjectId(body.card_id) if ObjectId.is_valid(body.card_id) else body.card_id
+
     db.events.insert_one({
-        "card_id": ObjectId(body.card_id) if ObjectId.is_valid(body.card_id) else body.card_id,
+        "card_id": card_id,
         "event": body.event.value,
-        "ts": datetime.now(timezone.utc),
+        "user_id": body.user_id,
+        "ts": now,
     })
+
+    if isinstance(card_id, ObjectId):
+        reel = db.reels.find_one({"_id": card_id}, {"rand": 1})
+        if reel and reel.get("rand") is not None:
+            db.feed_state.update_one(
+                {"user_id": body.user_id},
+                {
+                    "$max": {"cursor": reel["rand"]},
+                    "$set": {"updated_at": now},
+                    "$setOnInsert": {"created_at": now},
+                },
+                upsert=True,
+            )
+
     return {"ok": True}
 
 
