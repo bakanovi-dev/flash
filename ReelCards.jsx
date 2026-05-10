@@ -116,6 +116,7 @@ function ReelCards({ onBack }) {
   const transRef     = useRef(false);
   const deckRef      = useRef([]);
   const cursorRef    = useRef(null);
+  const freshCursorRef = useRef(null);
   const hasMoreRef   = useRef(true);
   const fetchingRef  = useRef(false);
   const flippedRef   = useRef(false);
@@ -137,6 +138,7 @@ function ReelCards({ onBack }) {
       user_id: CURRENT_USER_ID,
     });
     if (cursorRef.current !== null) params.set('cursor', cursorRef.current);
+    if (freshCursorRef.current !== null) params.set('fresh_cursor', freshCursorRef.current);
 
     const base = window.API_BASE || '';
     fetch(`${base}/api/v1/feed?${params}`)
@@ -145,7 +147,8 @@ function ReelCards({ onBack }) {
         fetchingRef.current = false;
         setLoading(false);
         hasMoreRef.current = !!data.has_more;
-        cursorRef.current = hasMoreRef.current ? data.next_cursor : null;
+        cursorRef.current = data.next_cursor ?? cursorRef.current;
+        freshCursorRef.current = data.next_fresh_cursor ?? freshCursorRef.current;
 
         if (data.items && data.items.length > 0) {
           const cards = data.items.map(c => ({ ...c, quote_ru: c.quote_translated }));

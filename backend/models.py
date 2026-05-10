@@ -55,4 +55,5 @@ class ReelCard(BaseModel):
 class FeedResponse(BaseModel):
     items: list[ReelCard]
     next_cursor: float | None
+    next_fresh_cursor: float | None = None
     has_more: bool
