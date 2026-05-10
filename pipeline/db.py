@@ -33,11 +33,21 @@ def reel_exists(quote_en: str, config: Config) -> bool:
     ) is not None
 
 
+def _next_rand(config: Config) -> float:
+    last = _collection(config).find_one(
+        {"rand": {"$exists": True}},
+        {"rand": 1},
+        sort=[("rand", -1)],
+    )
+    return (last or {}).get("rand", 0) + 1
+
+
 def save_reel(enriched: dict, source: dict, quote_en: str, config: Config) -> str:
     now = datetime.now(timezone.utc)
     doc = {
         "quote_en": quote_en,
         "source": source,
+        "rand": _next_rand(config),
         "frequency_score": 0.0,
         "status": "pending",
         "created_at": now,
