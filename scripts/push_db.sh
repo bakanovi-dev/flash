@@ -20,8 +20,14 @@ until $SSH "$SERVER" "docker exec $REMOTE_CONTAINER mongo --quiet --eval 'db.run
   sleep 3
 done
 
-echo "==> Dumping $DB from local Docker..."
-echo "==> Restoring to $SERVER..."
+echo "==> Checking local DB has data..."
+LOCAL_COUNT=$(docker exec "$LOCAL_CONTAINER" mongo --quiet --eval "db.getSiblingDB('$DB').reels.count()" 2>/dev/null || \
+              docker exec "$LOCAL_CONTAINER" mongosh --quiet --eval "db.getSiblingDB('$DB').reels.countDocuments()" 2>/dev/null)
+if [ -z "$LOCAL_COUNT" ] || [ "$LOCAL_COUNT" -eq 0 ]; then
+  echo "ERROR: local reels collection is empty or MongoDB is not running. Aborting."
+  exit 1
+fi
+echo "==> Local reels: $LOCAL_COUNT. Dumping and restoring..."
 
 docker exec "$LOCAL_CONTAINER" mongodump --archive --db "$DB" \
   | $SSH "$SERVER" "docker exec -i $REMOTE_CONTAINER mongorestore --archive --drop --db $DB"

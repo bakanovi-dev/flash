@@ -137,6 +137,7 @@ function ReelCards({ onBack }) {
   const transRef     = useRef(false);
   const deckRef      = useRef([]);
   const cursorRef    = useRef(null);
+  const resumeRef    = useRef(false);
   const hasMoreRef   = useRef(true);
   const fetchingRef  = useRef(false);
   const flippedRef    = useRef(false);
@@ -159,6 +160,7 @@ function ReelCards({ onBack }) {
       user_id: CURRENT_USER_ID,
     });
     if (cursorRef.current !== null) params.set('cursor', cursorRef.current);
+    if (resumeRef.current) { params.set('resume', '1'); resumeRef.current = false; }
 
     const base = window.API_BASE || '';
     fetch(`${base}/api/v1/feed?${params}`)
@@ -196,9 +198,17 @@ function ReelCards({ onBack }) {
       });
   };
 
-  useEffect(() => { fetchBatch(); }, []);
+  useEffect(() => {
+    const base = window.API_BASE || '';
+    fetch(`${base}/api/v1/feed/state?user_id=${CURRENT_USER_ID}`)
+      .then(r => r.json())
+      .then(data => { if (data.cursor !== null) { cursorRef.current = data.cursor; resumeRef.current = true; } })
+      .catch(() => {})
+      .finally(() => fetchBatch());
+  }, []);
 
   useEffect(() => {
+    if (deck.length === 0) return;
     if (deckRef.current.length - index <= PRELOAD_AT) {
       fetchBatch();
     }
@@ -212,7 +222,11 @@ function ReelCards({ onBack }) {
     if (next && !wasFlippedRef.current) {
       wasFlippedRef.current = true;
       const curCard = deckRef.current[indexRef.current];
-      if (curCard) fireEvent(curCard.id, 'flip');
+      if (curCard) {
+        fireEvent(curCard.id, 'flip');
+        const base = window.API_BASE || '';
+        fetch(`${base}/api/v1/feed/position?user_id=${CURRENT_USER_ID}&prev_rand=${curCard.rand}`, { method: 'POST' }).catch(() => {});
+      }
     }
   };
 
@@ -238,6 +252,11 @@ function ReelCards({ onBack }) {
       wasFlippedRef.current = false;
       setExitDir(null); setPendingIndex(null);
       transRef.current = false;
+      const nextCard = deckRef.current[nextIdx];
+      if (nextCard) {
+        const base = window.API_BASE || '';
+        fetch(`${base}/api/v1/feed/position?user_id=${CURRENT_USER_ID}&prev_rand=${nextCard.rand}`, { method: 'POST' }).catch(() => {});
+      }
     }, 340);
   };
 
