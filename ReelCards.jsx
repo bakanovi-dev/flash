@@ -5,34 +5,53 @@ const PRELOAD_AT = 5;
 const REPEAT_WINDOW = 100;
 const CURRENT_USER_ID = '1';
 
-function speak(text) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'en-US'; u.rate = 0.88;
-  window.speechSynthesis.speak(u);
-}
-
 function SpeakBtn({ text }) {
+  const [speaking, setSpeaking] = useState(false);
+
+  const toggle = (e) => {
+    e.stopPropagation();
+    if (!window.speechSynthesis) return;
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+    } else {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'en-US'; u.rate = 0.88;
+      u.onend   = () => setSpeaking(false);
+      u.onerror = () => setSpeaking(false);
+      window.speechSynthesis.speak(u);
+      setSpeaking(true);
+    }
+  };
+
   return (
     <button
       className="speak-btn"
-      aria-label="Произнести"
+      aria-label={speaking ? 'Остановить' : 'Произнести'}
       onPointerDown={e => e.stopPropagation()}
-      onClick={e => { e.stopPropagation(); speak(text); }}
+      onClick={toggle}
       style={{
         background: 'none', border: 'none', cursor: 'pointer',
-        padding: '0 0 8px 0', display: 'block',
-        color: 'var(--muted)', lineHeight: 1, opacity: 0.5,
+        padding: '0 0 8px 0', display: 'block', lineHeight: 1,
+        color: speaking ? 'var(--accent)' : 'var(--muted)',
+        opacity: speaking ? 1 : 0.5,
         alignSelf: 'flex-start',
+        transition: 'color 150ms, opacity 150ms',
       }}
     >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-      </svg>
+      {speaking ? (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+          <rect x="5" y="5" width="14" height="14" rx="2"/>
+        </svg>
+      ) : (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        </svg>
+      )}
     </button>
   );
 }
@@ -110,6 +129,7 @@ function ReelCards({ onBack }) {
   const [likes,        setLikes]        = useState(() => new Set());
   const [dislikes,     setDislikes]     = useState(() => new Set());
   const [saves,        setSaves]        = useState(() => new Set());
+  const [menuOpen,     setMenuOpen]     = useState(false);
 
   const dragRef      = useRef({ id: null, startY: 0, startTime: 0, moved: false });
   const dyRef        = useRef(0);
@@ -228,6 +248,7 @@ function ReelCards({ onBack }) {
   }, []);
 
   const onPointerDown = (e) => {
+    if (menuOpen) return;
     if (e.target.closest('.reel-card-actions') || e.target.closest('.speak-btn')) return;
     if (transRef.current) return;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -351,67 +372,105 @@ function ReelCards({ onBack }) {
 
   return (
     <div className="reel-app">
-      <div
-        className="reel-scene"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-      >
-        {pendingIndex !== null && (
-          <div
-            key={'p' + pendingIndex}
-            className={"reel-card " + (exitDir === 'up' ? 'enter-bottom' : 'enter-top')}
-          >
-            <QuoteCardFaces card={deck[pendingIndex]} />
-          </div>
-        )}
-
+      <div className={"reel-content" + (menuOpen ? " menu-open" : "")}>
         <div
-          key={'c' + index}
-          className={"reel-card current" + (dragging ? ' dragging' : '')}
-          style={{ transform: currentTransform, transition: currentTransition }}
+          className="reel-scene"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
         >
-          <QuoteCardFaces card={card} />
-        </div>
+          {pendingIndex !== null && (
+            <div
+              key={'p' + pendingIndex}
+              className={"reel-card " + (exitDir === 'up' ? 'enter-bottom' : 'enter-top')}
+            >
+              <QuoteCardFaces card={deck[pendingIndex]} />
+            </div>
+          )}
 
-        <div className="reel-card-actions">
-          <button
-            className={"reel-btn" + (isSaved ? " saved" : "")}
-            onClick={toggleSave}
-            aria-label="Сохранить"
+          <div
+            key={'c' + index}
+            className={"reel-card current" + (dragging ? ' dragging' : '')}
+            style={{ transform: currentTransform, transition: currentTransition }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24"
-              fill={isSaved ? "currentColor" : "none"}
-              stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <QuoteCardFaces card={card} />
+          </div>
+
+          <div className="reel-card-actions">
+            <button
+              className={"reel-btn" + (isSaved ? " saved" : "")}
+              onClick={toggleSave}
+              aria-label="Сохранить"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24"
+                fill={isSaved ? "currentColor" : "none"}
+                stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+              </svg>
+            </button>
+            <button
+              className={"reel-btn" + (isLiked ? " liked" : "")}
+              onClick={toggleLike}
+              aria-label="Нравится"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24"
+                fill={isLiked ? "currentColor" : "none"}
+                stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
+                <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+              </svg>
+            </button>
+            <button
+              className={"reel-btn" + (isDisliked ? " disliked" : "")}
+              onClick={toggleDislike}
+              aria-label="Не нравится"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24"
+                fill={isDisliked ? "currentColor" : "none"}
+                stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/>
+                <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {menuOpen && (
+        <div className="reel-menu-backdrop" onClick={() => setMenuOpen(false)} />
+      )}
+
+      <button
+        className={"reel-burger" + (menuOpen ? " is-open" : "")}
+        style={{ opacity: flipped ? 0 : 1, pointerEvents: flipped ? 'none' : 'auto' }}
+        onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
+        aria-label="Меню"
+      >
+        <span /><span /><span />
+      </button>
+
+      <div className={"reel-menu" + (menuOpen ? " is-open" : "")}>
+        <div className="reel-menu-head">
+          <span>Меню</span>
+        </div>
+        <nav className="reel-menu-nav">
+          <button className="reel-menu-item" onClick={() => { setMenuOpen(false); onBack(); }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 5l-7 7 7 7"/>
+            </svg>
+            На главную
+          </button>
+          <button className="reel-menu-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
             </svg>
+            Сохранённые
+            {saves.size > 0 && <span className="reel-menu-badge">{saves.size}</span>}
           </button>
-          <button
-            className={"reel-btn" + (isLiked ? " liked" : "")}
-            onClick={toggleLike}
-            aria-label="Нравится"
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24"
-              fill={isLiked ? "currentColor" : "none"}
-              stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
-              <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
-            </svg>
-          </button>
-          <button
-            className={"reel-btn" + (isDisliked ? " disliked" : "")}
-            onClick={toggleDislike}
-            aria-label="Не нравится"
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24"
-              fill={isDisliked ? "currentColor" : "none"}
-              stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/>
-              <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>
-            </svg>
-          </button>
-        </div>
+        </nav>
       </div>
     </div>
   );

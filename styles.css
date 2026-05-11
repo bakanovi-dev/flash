@@ -467,3 +467,81 @@ a { color: inherit; text-decoration: none; }
 .reel-word-tr {
   font-size: 14px; color: rgba(255,255,255,0.5);
 }
+
+/* ── BURGER MENU ────────────────────────────────── */
+
+.reel-content {
+  position: absolute; inset: 0;
+  transition: transform 320ms cubic-bezier(.25,.7,.3,1);
+}
+.reel-content.menu-open {
+  transform: translateX(-280px);
+}
+
+.reel-burger {
+  position: absolute; top: 20px; right: 20px; z-index: 30;
+  background: none; border: none;
+  cursor: pointer; width: 38px; height: 30px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 5px; padding: 0;
+  transition: opacity 220ms ease;
+}
+
+.reel-burger span {
+  display: block; width: 20px; height: 1.5px;
+  background: var(--ink); border-radius: 1px;
+  transition: transform 280ms cubic-bezier(.25,.7,.3,1), opacity 220ms ease, background 220ms ease;
+  transform-origin: center;
+}
+.reel-burger.is-open span { background: #fff; }
+.reel-burger.is-open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+.reel-burger.is-open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.reel-burger.is-open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+.reel-menu-backdrop {
+  position: absolute; inset: 0; z-index: 24;
+  background: rgba(0,0,0,0.45);
+}
+
+.reel-menu {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: 280px; z-index: 25;
+  background: #1c1c1e;
+  display: flex; flex-direction: column;
+  padding: 0;
+  transform: translateX(100%);
+  transition: transform 320ms cubic-bezier(.25,.7,.3,1);
+  box-shadow: -8px 0 32px rgba(0,0,0,0.35);
+}
+.reel-menu.is-open { transform: translateX(0); }
+
+.reel-menu-head {
+  padding: 68px 24px 20px;
+  font-family: 'Geist Mono', monospace; font-size: 10px;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: rgba(255,255,255,0.35); font-weight: 600;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.reel-menu-nav {
+  display: flex; flex-direction: column; padding: 12px 0;
+}
+
+.reel-menu-item {
+  display: flex; align-items: center; gap: 12px;
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.8); font-family: 'Geist', sans-serif;
+  font-size: 15px; font-weight: 500; text-align: left;
+  padding: 14px 24px; transition: background 140ms ease, color 140ms ease;
+}
+.reel-menu-item:hover {
+  background: rgba(255,255,255,0.06); color: #fff;
+}
+
+.reel-menu-badge {
+  margin-left: auto;
+  background: var(--accent); color: #fff;
+  font-family: 'Geist Mono', monospace; font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 20px;
+  letter-spacing: 0.04em;
+}
