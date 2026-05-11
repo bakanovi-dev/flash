@@ -8,8 +8,6 @@ from db import get_db
 from models import FeedResponse, ReelCard, Expression, Word, Tags, EventIn
 
 app = FastAPI(title="Flashcards API", version="1.0.0")
-FRESH_RAND_START = 1.0
-FRESH_BATCH_SIZE = 3
 
 app.add_middleware(
     CORSMiddleware,
@@ -71,7 +69,6 @@ def _to_card(r: dict, lang: str) -> ReelCard:
 async def get_feed(
     limit: int = Query(default=15, ge=1, le=100),
     cursor: float | None = Query(default=None),
-    fresh_cursor: float | None = Query(default=None),
     lang: str = Query(default="ru"),
     domain: str | None = Query(default=None),
     cefr: str | None = Query(default=None),
@@ -79,50 +76,38 @@ async def get_feed(
 ):
     db = get_db()
 
-    state = db.feed_state.find_one({"user_id": user_id}, {"cursor": 1, "fresh_cursor": 1})
-    start_cursor = cursor if cursor is not None else (state or {}).get("cursor")
-    start_fresh_cursor = (
-        fresh_cursor
-        if fresh_cursor is not None
-        else (state or {}).get("fresh_cursor", FRESH_RAND_START)
-    )
+    state = db.feed_state.find_one({"user_id": user_id}, {"cursor": 1})
+    start_cursor = cursor if cursor is not None else (state or {}).get("cursor", 0.0)
 
     base_query: dict = {"status": {"$in": ["published", "pending"]}}
-
     if domain:
         base_query["tags.domains"] = domain
-
     if cefr:
         base_query["tags.cefr"] = cefr
 
-    fresh_limit = min(FRESH_BATCH_SIZE, limit)
-    fresh_query = {
-        **base_query,
-        "rand": {"$gt": max(start_fresh_cursor, FRESH_RAND_START)},
-    }
-    fresh_reels = list(db.reels.find(fresh_query).sort("rand", 1).limit(fresh_limit))
+    reels = list(
+        db.reels.find({**base_query, "rand": {"$gt": start_cursor}})
+        .sort("rand", 1)
+        .limit(limit)
+    )
 
-    regular_limit = limit - len(fresh_reels)
-    regular_query = {
-        **base_query,
-        "rand": {"$lt": FRESH_RAND_START},
-    }
-    if start_cursor is not None:
-        regular_query["rand"]["$gt"] = start_cursor
-    else:
-        regular_query["rand"]["$gte"] = 0
+    # Reached the end — wrap around to the beginning
+    wrapped = False
+    if not reels:
+        start_cursor = 0.0
+        wrapped = True
+        reels = list(
+            db.reels.find({**base_query, "rand": {"$gte": 0.0}})
+            .sort("rand", 1)
+            .limit(limit)
+        )
 
-    regular_reels = list(db.reels.find(regular_query).sort("rand", 1).limit(regular_limit))
-    reels = fresh_reels + regular_reels
-
-    next_cursor = regular_reels[-1]["rand"] if regular_reels else start_cursor
-    next_fresh_cursor = fresh_reels[-1]["rand"] if fresh_reels else start_fresh_cursor
-    has_more = len(reels) == limit
+    next_cursor = reels[-1]["rand"] if reels else start_cursor
+    has_more = bool(reels) and (wrapped or len(reels) == limit)
 
     return FeedResponse(
         items=[_to_card(r, lang) for r in reels],
         next_cursor=next_cursor,
-        next_fresh_cursor=next_fresh_cursor,
         has_more=has_more,
     )
 
@@ -161,11 +146,10 @@ async def post_event(body: EventIn):
     if isinstance(card_id, ObjectId):
         reel = db.reels.find_one({"_id": card_id}, {"rand": 1})
         if reel and reel.get("rand") is not None:
-            cursor_field = "fresh_cursor" if reel["rand"] > FRESH_RAND_START else "cursor"
             db.feed_state.update_one(
                 {"user_id": body.user_id},
                 {
-                    "$max": {cursor_field: reel["rand"]},
+                    "$max": {"cursor": reel["rand"]},
                     "$set": {"updated_at": now},
                     "$setOnInsert": {"created_at": now},
                 },
