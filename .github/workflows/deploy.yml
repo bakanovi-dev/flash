@@ -26,6 +26,5 @@ jobs:
                 -o "$HOME/.docker/cli-plugins/docker-compose"
               chmod +x "$HOME/.docker/cli-plugins/docker-compose"
             fi
-            docker stop flash 2>/dev/null || true
-            docker rm flash 2>/dev/null || true
-            docker compose up -d --build
+            docker compose build --no-cache
+            docker compose up -d
