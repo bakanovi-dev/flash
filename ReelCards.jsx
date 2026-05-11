@@ -139,11 +139,13 @@ function ReelCards({ onBack }) {
   const cursorRef    = useRef(null);
   const hasMoreRef   = useRef(true);
   const fetchingRef  = useRef(false);
-  const flippedRef   = useRef(false);
+  const flippedRef    = useRef(false);
   const wasFlippedRef = useRef(false);
+  const menuOpenRef   = useRef(false);
 
-  indexRef.current = index;
-  deckRef.current  = deck;
+  indexRef.current   = index;
+  deckRef.current    = deck;
+  menuOpenRef.current = menuOpen;
 
   const fetchBatch = () => {
     if (fetchingRef.current) return;
@@ -203,6 +205,7 @@ function ReelCards({ onBack }) {
   }, [index, deck.length]);
 
   const doFlip = () => {
+    if (menuOpenRef.current) return;
     const next = !flippedRef.current;
     flippedRef.current = next;
     setFlipped(next);
@@ -214,6 +217,7 @@ function ReelCards({ onBack }) {
   };
 
   const navigate = (dir) => {
+    if (menuOpenRef.current) { setMenuOpen(false); return; }
     if (transRef.current) return;
     const curIdx  = indexRef.current;
     const nextIdx = curIdx + (dir === 'up' ? 1 : -1);
@@ -441,14 +445,15 @@ function ReelCards({ onBack }) {
         <div className="reel-menu-backdrop" onClick={() => setMenuOpen(false)} />
       )}
 
-      <button
-        className={"reel-burger" + (menuOpen ? " is-open" : "")}
-        style={{ opacity: flipped ? 0 : 1, pointerEvents: flipped ? 'none' : 'auto' }}
-        onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
-        aria-label="Меню"
-      >
-        <span /><span /><span />
-      </button>
+      {!flipped && (
+        <button
+          className={"reel-burger" + (menuOpen ? " is-open" : "")}
+          onPointerDown={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
+          aria-label="Меню"
+        >
+          <span /><span /><span />
+        </button>
+      )}
 
       <div className={"reel-menu" + (menuOpen ? " is-open" : "")}>
         <div className="reel-menu-head">
