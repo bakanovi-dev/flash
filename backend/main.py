@@ -81,6 +81,7 @@ def _to_card(r: dict, lang: str, saved: bool = False, liked: bool = False) -> Re
 
     return ReelCard(
         id=str(r["_id"]),
+        rand=r.get("rand", 0.0),
         quote_en=r.get("quote_en", ""),
         context=loc.get("context", ""),
         quote_translated=loc.get("quote", ""),
@@ -104,6 +105,7 @@ async def get_feed(
     domain: str | None = Query(default=None),
     cefr: str | None = Query(default=None),
     user_id: str = Query(default="1"),
+    resume: bool = Query(default=False),
 ):
     db = get_db()
 
@@ -122,11 +124,12 @@ async def get_feed(
 
     profile = db.user_profiles.find_one({"user_id": user_id}) or {}
     like_count = profile.get("like_count", 0)
-    personalized = like_count >= PERSONALIZATION_THRESHOLD
+    personalized = like_count >= PERSONALIZATION_THRESHOLD and not resume
     fetch_limit = limit * 3 if personalized else limit
 
+    rand_op = "$gte" if resume else "$gt"
     candidates = list(
-        db.reels.find({**base_query, "rand": {"$gt": start_cursor}})
+        db.reels.find({**base_query, "rand": {rand_op: start_cursor}})
         .sort("rand", 1)
         .limit(fetch_limit)
     )
@@ -135,6 +138,12 @@ async def get_feed(
     if not candidates:
         start_cursor = 0.0
         wrapped = True
+        now = datetime.now(timezone.utc)
+        db.feed_state.update_one(
+            {"user_id": user_id},
+            {"$set": {"cursor": 0.0, "resume_cursor": 0.0, "updated_at": now}, "$setOnInsert": {"created_at": now}},
+            upsert=True,
+        )
         candidates = list(
             db.reels.find({**base_query, "rand": {"$gte": 0.0}})
             .sort("rand", 1)
@@ -168,6 +177,26 @@ async def get_feed(
         next_cursor=next_cursor,
         has_more=has_more,
     )
+
+
+@app.get("/api/v1/feed/state")
+async def get_feed_state(user_id: str = Query(default="1")):
+    db = get_db()
+    state = db.feed_state.find_one({"user_id": user_id}, {"cursor": 1, "position_cursor": 1})
+    cursor = (state or {}).get("position_cursor", (state or {}).get("cursor", None))
+    return {"cursor": cursor}
+
+
+@app.post("/api/v1/feed/position")
+async def save_position(prev_rand: float = Query(...), user_id: str = Query(default="1")):
+    db = get_db()
+    now = datetime.now(timezone.utc)
+    db.feed_state.update_one(
+        {"user_id": user_id},
+        {"$set": {"position_cursor": prev_rand, "updated_at": now}, "$setOnInsert": {"created_at": now}},
+        upsert=True,
+    )
+    return {"ok": True}
 
 
 @app.get("/api/v1/reels/{reel_id}", response_model=ReelCard)

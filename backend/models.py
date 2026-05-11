@@ -40,6 +40,7 @@ class Tags(BaseModel):
 
 class ReelCard(BaseModel):
     id: str
+    rand: float
     quote_en: str
     context: str
     quote_translated: str
