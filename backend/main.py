@@ -1,11 +1,40 @@
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from bson import ObjectId
 
 from db import get_db
 from models import FeedResponse, ReelCard, Expression, Word, Tags, EventIn
+
+CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]
+PERSONALIZATION_THRESHOLD = 10
+WEIGHT_DELTAS = {"dislike": -0.1, "skip": -0.05}
+
+
+def _length_bucket(n: int) -> str:
+    if n <= 10: return "short"
+    if n <= 20: return "medium"
+    return "long"
+
+
+def _weight_keys(r: dict) -> list[str]:
+    keys = []
+    for domain in r.get("tags", {}).get("domains", []):
+        keys.append(f"domain:{domain}")
+    emotion = r.get("tags", {}).get("emotion", "")
+    if emotion: keys.append(f"emotion:{emotion}")
+    register = r.get("tags", {}).get("register", "")
+    if register: keys.append(f"register:{register}")
+    cefr = r.get("tags", {}).get("cefr", "")
+    if cefr: keys.append(f"cefr:{cefr}")
+    length = r.get("quote_length", 0)
+    if length: keys.append(f"length:{_length_bucket(length)}")
+    return keys
+
+
+def _score_reel(r: dict, weights: dict) -> float:
+    return sum(weights.get(k, 0.0) for k in _weight_keys(r))
 
 app = FastAPI(title="Flashcards API", version="1.0.0")
 
@@ -17,7 +46,7 @@ app.add_middleware(
 )
 
 
-def _to_card(r: dict, lang: str) -> ReelCard:
+def _to_card(r: dict, lang: str, saved: bool = False, liked: bool = False) -> ReelCard:
     loc = r.get("locales", {}).get(lang, {})
     src = r.get("source", {})
 
@@ -62,6 +91,8 @@ def _to_card(r: dict, lang: str) -> ReelCard:
         tags=tags,
         expressions=expressions,
         words=words,
+        saved=saved,
+        liked=liked,
     )
 
 
@@ -89,28 +120,51 @@ async def get_feed(
     if cefr:
         base_query["tags.cefr"] = cefr
 
-    reels = list(
+    profile = db.user_profiles.find_one({"user_id": user_id}) or {}
+    like_count = profile.get("like_count", 0)
+    personalized = like_count >= PERSONALIZATION_THRESHOLD
+    fetch_limit = limit * 3 if personalized else limit
+
+    candidates = list(
         db.reels.find({**base_query, "rand": {"$gt": start_cursor}})
         .sort("rand", 1)
-        .limit(limit)
+        .limit(fetch_limit)
     )
 
-    # Reached the end — wrap around to the beginning
     wrapped = False
-    if not reels:
+    if not candidates:
         start_cursor = 0.0
         wrapped = True
-        reels = list(
+        candidates = list(
             db.reels.find({**base_query, "rand": {"$gte": 0.0}})
             .sort("rand", 1)
-            .limit(limit)
+            .limit(fetch_limit)
         )
 
-    next_cursor = reels[-1]["rand"] if reels else start_cursor
-    has_more = bool(reels) and (wrapped or len(reels) == limit)
+    if personalized and candidates:
+        weights = profile.get("interest_weights", {})
+        candidates.sort(key=lambda r: _score_reel(r, weights), reverse=True)
+
+    reels = candidates[:limit]
+    next_cursor = candidates[-1]["rand"] if candidates else start_cursor
+    has_more = bool(candidates) and (wrapped or len(candidates) == fetch_limit)
+
+    reel_ids = [r["_id"] for r in reels]
+    saved_ids = {
+        s["card_id"] for s in db.saves.find(
+            {"user_id": user_id, "card_id": {"$in": reel_ids}},
+            {"card_id": 1},
+        )
+    }
+    liked_ids = {
+        l["card_id"] for l in db.likes.find(
+            {"user_id": user_id, "card_id": {"$in": reel_ids}},
+            {"card_id": 1},
+        )
+    }
 
     return FeedResponse(
-        items=[_to_card(r, lang) for r in reels],
+        items=[_to_card(r, lang, saved=r["_id"] in saved_ids, liked=r["_id"] in liked_ids) for r in reels],
         next_cursor=next_cursor,
         has_more=has_more,
     )
@@ -134,6 +188,49 @@ async def get_reel(
     return _to_card(r, lang)
 
 
+@app.post("/api/v1/likes/{card_id}")
+async def toggle_like(card_id: str, user_id: str = Query(default="1")):
+    db = get_db()
+    now = datetime.now(timezone.utc)
+    oid = ObjectId(card_id) if ObjectId.is_valid(card_id) else card_id
+
+    reel = db.reels.find_one({"_id": oid}, {"tags": 1, "quote_length": 1, "rand": 1})
+    if not reel:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    keys = _weight_keys(reel)
+    existing = db.likes.find_one({"user_id": user_id, "card_id": oid})
+
+    if existing:
+        db.likes.delete_one({"_id": existing["_id"]})
+        weight_delta = {f"interest_weights.{k}": -0.1 for k in keys}
+        db.user_profiles.update_one(
+            {"user_id": user_id},
+            {"$inc": {**weight_delta, "like_count": -1}, "$set": {"updated_at": now}},
+            upsert=True,
+        )
+        return {"liked": False}
+
+    db.likes.insert_one({"user_id": user_id, "card_id": oid, "created_at": now})
+    weight_delta = {f"interest_weights.{k}": 0.1 for k in keys}
+    db.user_profiles.update_one(
+        {"user_id": user_id},
+        {
+            "$inc": {**weight_delta, "like_count": 1},
+            "$set": {"updated_at": now},
+            "$setOnInsert": {"created_at": now},
+        },
+        upsert=True,
+    )
+    if reel.get("rand") is not None:
+        db.feed_state.update_one(
+            {"user_id": user_id},
+            {"$max": {"cursor": reel["rand"]}, "$set": {"updated_at": now}, "$setOnInsert": {"created_at": now}},
+            upsert=True,
+        )
+    return {"liked": True}
+
+
 @app.post("/api/v1/events")
 async def post_event(body: EventIn):
     db = get_db()
@@ -148,19 +245,48 @@ async def post_event(body: EventIn):
     })
 
     if isinstance(card_id, ObjectId):
-        reel = db.reels.find_one({"_id": card_id}, {"rand": 1})
-        if reel and reel.get("rand") is not None:
-            db.feed_state.update_one(
-                {"user_id": body.user_id},
-                {
-                    "$max": {"cursor": reel["rand"]},
-                    "$set": {"updated_at": now},
-                    "$setOnInsert": {"created_at": now},
-                },
-                upsert=True,
-            )
+        reel = db.reels.find_one({"_id": card_id}, {"rand": 1, "tags": 1, "quote_length": 1})
+        if reel:
+            if reel.get("rand") is not None:
+                db.feed_state.update_one(
+                    {"user_id": body.user_id},
+                    {"$max": {"cursor": reel["rand"]}, "$set": {"updated_at": now}, "$setOnInsert": {"created_at": now}},
+                    upsert=True,
+                )
+            delta = WEIGHT_DELTAS.get(body.event.value)
+            if delta is not None:
+                keys = _weight_keys(reel)
+                weight_delta = {f"interest_weights.{k}": delta for k in keys}
+                db.user_profiles.update_one(
+                    {"user_id": body.user_id},
+                    {"$inc": weight_delta, "$set": {"updated_at": now}, "$setOnInsert": {"created_at": now}},
+                    upsert=True,
+                )
 
     return {"ok": True}
+
+
+@app.get("/api/v1/saves")
+async def get_saves(user_id: str = Query(default="1")):
+    db = get_db()
+    saved = db.saves.find({"user_id": user_id}, {"card_id": 1})
+    return {"ids": [str(s["card_id"]) for s in saved]}
+
+
+@app.post("/api/v1/saves/{card_id}")
+async def toggle_save(card_id: str, user_id: str = Query(default="1")):
+    db = get_db()
+    oid = ObjectId(card_id) if ObjectId.is_valid(card_id) else card_id
+    existing = db.saves.find_one({"user_id": user_id, "card_id": oid})
+    if existing:
+        db.saves.delete_one({"_id": existing["_id"]})
+        return {"saved": False}
+    db.saves.insert_one({
+        "user_id": user_id,
+        "card_id": oid,
+        "created_at": datetime.now(timezone.utc),
+    })
+    return {"saved": True}
 
 
 @app.get("/health")

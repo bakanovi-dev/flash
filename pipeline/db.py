@@ -40,6 +40,7 @@ def save_reel(enriched: dict, source: dict, quote_en: str, config: Config) -> st
         "quote_en": quote_en,
         "source": source,
         "rand": random.random(),
+        "quote_length": len(quote_en.split()),
         "frequency_score": 0.0,
         "status": "pending",
         "created_at": now,

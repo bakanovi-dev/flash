@@ -38,9 +38,9 @@ function SpeakBtn({ text }) {
 }
 
 function QuoteCardFaces({ card }) {
-  const epLabel = card.show
+  const epLabel = card.show && card.season != null
     ? `${card.show} · S${String(card.season).padStart(2,'0')}E${String(card.episode).padStart(2,'0')}`
-    : null;
+    : card.show || null;
 
   return (
     <>
@@ -109,6 +109,7 @@ function ReelCards({ onBack }) {
   const [pendingIndex, setPendingIndex] = useState(null);
   const [likes,        setLikes]        = useState(() => new Set());
   const [dislikes,     setDislikes]     = useState(() => new Set());
+  const [saves,        setSaves]        = useState(() => new Set());
 
   const dragRef      = useRef({ id: null, startY: 0, startTime: 0, moved: false });
   const dyRef        = useRef(0);
@@ -116,7 +117,6 @@ function ReelCards({ onBack }) {
   const transRef     = useRef(false);
   const deckRef      = useRef([]);
   const cursorRef    = useRef(null);
-  const freshCursorRef = useRef(null);
   const hasMoreRef   = useRef(true);
   const fetchingRef  = useRef(false);
   const flippedRef   = useRef(false);
@@ -134,11 +134,9 @@ function ReelCards({ onBack }) {
     const params = new URLSearchParams({
       limit: String(BATCH_SIZE),
       lang: 'ru',
-      domain: 'business',
       user_id: CURRENT_USER_ID,
     });
     if (cursorRef.current !== null) params.set('cursor', cursorRef.current);
-    if (freshCursorRef.current !== null) params.set('fresh_cursor', freshCursorRef.current);
 
     const base = window.API_BASE || '';
     fetch(`${base}/api/v1/feed?${params}`)
@@ -148,10 +146,19 @@ function ReelCards({ onBack }) {
         setLoading(false);
         hasMoreRef.current = !!data.has_more;
         cursorRef.current = data.next_cursor ?? cursorRef.current;
-        freshCursorRef.current = data.next_fresh_cursor ?? freshCursorRef.current;
 
         if (data.items && data.items.length > 0) {
           const cards = data.items.map(c => ({ ...c, quote_ru: c.quote_translated }));
+          setSaves(prev => {
+            const s = new Set(prev);
+            cards.forEach(c => { if (c.saved) s.add(reelKey(c)); });
+            return s;
+          });
+          setLikes(prev => {
+            const s = new Set(prev);
+            cards.forEach(c => { if (c.liked) s.add(reelKey(c)); });
+            return s;
+          });
           setDeck(prev => {
             const seen = new Set(prev.map(c => c.id));
             const updated = [...prev, ...cards.filter(c => !seen.has(c.id))];
@@ -257,21 +264,54 @@ function ReelCards({ onBack }) {
   const currentKey = card ? reelKey(card) : null;
   const isLiked    = !!(currentKey && likes.has(currentKey));
   const isDisliked = !!(currentKey && dislikes.has(currentKey));
+  const isSaved    = !!(currentKey && saves.has(currentKey));
 
   const toggleLike = (e) => {
     e.stopPropagation();
     if (!currentKey || !card) return;
+    const wasLiked = likes.has(currentKey);
     setLikes(prev => {
       const s = new Set(prev);
-      if (s.has(currentKey)) {
-        s.delete(currentKey);
-      } else {
-        s.add(currentKey);
-        fireEvent(card.id, 'like');
-        setDislikes(d => { const nd = new Set(d); nd.delete(currentKey); return nd; });
-      }
+      if (wasLiked) { s.delete(currentKey); } else { s.add(currentKey); }
       return s;
     });
+    const base = window.API_BASE || '';
+    fetch(`${base}/api/v1/likes/${card.id}?user_id=${CURRENT_USER_ID}`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => setLikes(prev => {
+        const s = new Set(prev);
+        if (data.liked) { s.add(currentKey); } else { s.delete(currentKey); }
+        return s;
+      }))
+      .catch(() => setLikes(prev => {
+        const s = new Set(prev);
+        if (wasLiked) { s.add(currentKey); } else { s.delete(currentKey); }
+        return s;
+      }));
+  };
+
+  const toggleSave = (e) => {
+    e.stopPropagation();
+    if (!currentKey || !card) return;
+    const wasSaved = saves.has(currentKey);
+    setSaves(prev => {
+      const s = new Set(prev);
+      if (wasSaved) { s.delete(currentKey); } else { s.add(currentKey); }
+      return s;
+    });
+    const base = window.API_BASE || '';
+    fetch(`${base}/api/v1/saves/${card.id}?user_id=${CURRENT_USER_ID}`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => setSaves(prev => {
+        const s = new Set(prev);
+        if (data.saved) { s.add(currentKey); } else { s.delete(currentKey); }
+        return s;
+      }))
+      .catch(() => setSaves(prev => {
+        const s = new Set(prev);
+        if (wasSaved) { s.add(currentKey); } else { s.delete(currentKey); }
+        return s;
+      }));
   };
 
   const toggleDislike = (e) => {
@@ -337,6 +377,17 @@ function ReelCards({ onBack }) {
 
         <div className="reel-card-actions">
           <button
+            className={"reel-btn" + (isSaved ? " saved" : "")}
+            onClick={toggleSave}
+            aria-label="Сохранить"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24"
+              fill={isSaved ? "currentColor" : "none"}
+              stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+          <button
             className={"reel-btn" + (isLiked ? " liked" : "")}
             onClick={toggleLike}
             aria-label="Нравится"
@@ -347,7 +398,6 @@ function ReelCards({ onBack }) {
               <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
               <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
             </svg>
-            {likes.size > 0 && <span className="reel-btn-count">{likes.size}</span>}
           </button>
           <button
             className={"reel-btn" + (isDisliked ? " disliked" : "")}
@@ -360,7 +410,6 @@ function ReelCards({ onBack }) {
               <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/>
               <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>
             </svg>
-            {dislikes.size > 0 && <span className="reel-btn-count">{dislikes.size}</span>}
           </button>
         </div>
       </div>
