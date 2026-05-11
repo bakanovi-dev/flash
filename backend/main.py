@@ -81,7 +81,11 @@ async def get_feed(
 
     base_query: dict = {"status": {"$in": ["published", "pending"]}}
     if domain:
-        base_query["tags.domains"] = domain
+        # prefix match (e.g. "business" matches "business.finance") or exact match
+        if "." in domain:
+            base_query["tags.domains"] = domain
+        else:
+            base_query["tags.domains"] = {"$regex": f"^{domain}(\\..*)?$"}
     if cefr:
         base_query["tags.cefr"] = cefr
 
