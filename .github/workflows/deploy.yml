@@ -19,6 +19,7 @@ jobs:
           script: |
             cd /opt/flash || git clone https://github.com/bakanovi-dev/flash.git /opt/flash
             cd /opt/flash
+            git stash
             git pull origin main
             if ! docker compose version >/dev/null 2>&1; then
               mkdir -p "$HOME/.docker/cli-plugins"
