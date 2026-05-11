@@ -50,6 +50,8 @@ class ReelCard(BaseModel):
     tags: Tags
     expressions: list[Expression]
     words: list[Word]
+    saved: bool = False
+    liked: bool = False
 
 
 class FeedResponse(BaseModel):

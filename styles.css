@@ -383,6 +383,7 @@ a { color: inherit; text-decoration: none; }
 .reel-btn:active  { transform: scale(0.88); }
 .reel-btn.liked   { background: var(--know); color: #fff; }
 .reel-btn.disliked { background: var(--accent); color: #fff; }
+.reel-btn.saved   { background: #f59e0b; color: #fff; }
 
 .reel-btn-count {
   font-family: 'Geist Mono', monospace; font-size: 10px;

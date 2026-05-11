@@ -96,6 +96,7 @@ Rules:
 - literal translation: word-for-word, often surprising or funny — show how the phrase looks when translated blindly.
 - explanation: 2–3 sentences. Include etymology, historical origin, cultural context. Make it fascinating.
 - tags.domains: 1–3 values from: {domains_str}
+  Tag by what the phrase is ABOUT (topic/theme), not by the medium it came from. Never use the source (movie, series, book) as the domain — ask yourself: "what real-life topic does this phrase relate to?"
 - tags.emotion: one of: {" | ".join(EMOTIONS)}
 - tags.register: one of: {" | ".join(REGISTERS)}
 - tags.type: one of: {" | ".join(PHRASE_TYPES)} (primary expression type in this reel)

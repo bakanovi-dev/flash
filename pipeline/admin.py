@@ -14,6 +14,8 @@ from config import Config
 
 st.set_page_config(page_title="Flashcards QA", layout="wide", page_icon="🃏")
 
+PAGE_SIZE = 50
+
 # ── DB ──────────────────────────────────────────────────────────────────────
 
 @st.cache_resource
@@ -63,6 +65,10 @@ if "current_id" not in st.session_state:
     st.session_state.current_id = None
 if "selected" not in st.session_state:
     st.session_state.selected = set()
+if "page" not in st.session_state:
+    st.session_state.page = 0
+if "filter_hash" not in st.session_state:
+    st.session_state.filter_hash = ""
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -113,6 +119,18 @@ def episode_label(source):
 if st.session_state.view == "list":
     reels = load_reels(filter_status, filter_source, filter_domain if filter_domain != "all" else None, filter_no_speaker)
 
+    # Reset page when filters change
+    filter_hash = f"{filter_status}|{filter_source}|{filter_domain}|{filter_no_speaker}"
+    if st.session_state.filter_hash != filter_hash:
+        st.session_state.filter_hash = filter_hash
+        st.session_state.page = 0
+
+    total_pages = max(1, (len(reels) + PAGE_SIZE - 1) // PAGE_SIZE)
+    if st.session_state.page >= total_pages:
+        st.session_state.page = 0
+    page_start = st.session_state.page * PAGE_SIZE
+    page_reels = reels[page_start : page_start + PAGE_SIZE]
+
     st.subheader(f"Reels — {len(reels)} found")
 
     if not reels:
@@ -154,7 +172,7 @@ if st.session_state.view == "list":
         col.markdown(f"**{label}**")
     st.divider()
 
-    for reel in reels:
+    for reel in page_reels:
         rid = str(reel["_id"])
         cols = st.columns([0.5, 3.5, 1.5, 2, 1, 2, 1.5, 1.5])
 
@@ -193,6 +211,20 @@ if st.session_state.view == "list":
                 if bc2.button("❌", key=f"rej_{rid}", use_container_width=True):
                     set_status(rid, "rejected")
                     st.rerun()
+
+    # Pagination controls
+    st.divider()
+    pg1, pg2, pg3 = st.columns([1, 2, 1])
+    if pg1.button("← Prev", disabled=st.session_state.page == 0, use_container_width=True):
+        st.session_state.page -= 1
+        st.rerun()
+    pg2.markdown(
+        f"<div style='text-align:center;padding-top:8px'>Страница {st.session_state.page + 1} из {total_pages} &nbsp;·&nbsp; {page_start + 1}–{min(page_start + PAGE_SIZE, len(reels))} из {len(reels)}</div>",
+        unsafe_allow_html=True,
+    )
+    if pg3.button("Next →", disabled=st.session_state.page >= total_pages - 1, use_container_width=True):
+        st.session_state.page += 1
+        st.rerun()
 
 # ── DETAIL VIEW ──────────────────────────────────────────────────────────────
 
