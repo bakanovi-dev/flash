@@ -134,7 +134,7 @@ function ReelCards({ onBack }) {
     const params = new URLSearchParams({
       limit: String(BATCH_SIZE),
       lang: 'ru',
-      domain: 'entertainment.humor',
+      domain: 'business',
       user_id: CURRENT_USER_ID,
     });
     if (cursorRef.current !== null) params.set('cursor', cursorRef.current);
