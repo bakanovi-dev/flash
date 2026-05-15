@@ -33,7 +33,10 @@ def load_reels(status_filter=None, source_filter=None, domain_filter=None, no_sp
     if source_filter and source_filter != "all":
         q["source.show"] = source_filter
     if domain_filter and domain_filter != "all":
-        q["tags.domains"] = domain_filter
+        q["$or"] = [
+            {"tags.domains": domain_filter},
+            {"tags.domains.domain": {"$regex": f"^{domain_filter}"}},
+        ]
     if no_speaker:
         q["speaker"] = None
     return list(db.reels.find(q).sort("created_at", -1))
@@ -99,19 +102,44 @@ with st.sidebar:
 
     filter_no_speaker = st.checkbox("Без персонажа")
 
+    st.divider()
+    st.subheader("Language preview")
+    lang_options = {"English only": None}
+    lang_options.update({f"{LANGUAGE_NAMES[l]} ({l.upper()})": l for l in SUPPORTED_LANGUAGES})
+    preview_lang_label = st.selectbox("Preview language", list(lang_options.keys()), label_visibility="collapsed")
+    preview_lang = lang_options[preview_lang_label]
+
     if st.button("↩ Back to list", use_container_width=True):
         st.session_state.view = "list"
         st.session_state.current_id = None
         st.rerun()
 
-# ── Helper: episode label ────────────────────────────────────────────────────
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def fmt_domain(d):
+    """Format domain — supports both str and {domain, confidence} formats."""
+    if isinstance(d, dict):
+        name = d.get("domain", "")
+        conf = d.get("confidence")
+        return f"{name} ({conf}%)" if conf is not None else name
+    return str(d)
+
+def domain_name(d):
+    """Extract domain string from either format."""
+    return d.get("domain", "") if isinstance(d, dict) else str(d)
+
+def domain_confidence(d):
+    """Extract confidence int or None."""
+    return d.get("confidence") if isinstance(d, dict) else None
+
+
 
 def episode_label(source):
     s = source.get("season")
     e = source.get("episode")
     show = source.get("show", "")
     if s and e:
-        return f"{show} S{s:02d}E{e:02d}"
+        return f"{show} S{int(s):02d}E{int(e):02d}"
     return show
 
 # ── LIST VIEW ────────────────────────────────────────────────────────────────
@@ -182,8 +210,19 @@ if st.session_state.view == "list":
         else:
             st.session_state.selected.discard(rid)
 
-        quote_short = reel.get("quote_en", "")[:80] + ("…" if len(reel.get("quote_en", "")) > 80 else "")
-        cols[1].write(quote_short)
+        quote_en_text = reel.get("quote_en", "")
+        quote_short = quote_en_text[:80] + ("…" if len(quote_en_text) > 80 else "")
+        reel_locales = reel.get("locales", {})
+        langs_present = " · ".join(l for l in SUPPORTED_LANGUAGES if l in reel_locales)
+
+        if preview_lang:
+            translation = reel_locales.get(preview_lang, {}).get("quote", "")
+            cols[1].write(quote_short)
+            cols[1].caption(f"↳ {translation[:100]}" if translation else "↳ нет перевода")
+        else:
+            cols[1].write(quote_short)
+        if langs_present:
+            cols[1].caption(langs_present)
 
         speaker = reel.get("speaker")
         cols[2].markdown(f"`{speaker}`" if speaker else "❓")
@@ -191,7 +230,7 @@ if st.session_state.view == "list":
         cols[3].write(episode_label(reel.get("source", {})))
         cols[4].write(reel.get("tags", {}).get("cefr", "—"))
         domains = reel.get("tags", {}).get("domains", [])
-        cols[5].write(", ".join(domains[:2]))
+        cols[5].write(", ".join(fmt_domain(d) for d in domains[:2]))
 
         status = reel.get("status", "pending")
         status_badge = {"pending": "🟡 pending", "published": "🟢 published", "rejected": "🔴 rejected"}.get(status, status)
@@ -266,8 +305,20 @@ elif st.session_state.view == "detail" and st.session_state.current_id:
     # Tags
     st.markdown("**Tags**")
     t1, t2, t3, t4, t5, t6, t7 = st.columns(7)
-    valid_domains = [d for d in tags.get("domains", []) if d in DOMAINS]
-    new_domains = t1.multiselect("Domains", DOMAINS, default=valid_domains)
+    raw_domains = tags.get("domains", [])
+    valid_domain_names = [domain_name(d) for d in raw_domains if domain_name(d) in DOMAINS]
+    new_domain_names = t1.multiselect("Domains", DOMAINS, default=valid_domain_names)
+    # Show confidence badges if available
+    conf_items = [(domain_name(d), domain_confidence(d)) for d in raw_domains if domain_confidence(d) is not None]
+    if conf_items:
+        badges = " ".join(f"`{n}` **{c}%**" for n, c in conf_items)
+        t1.markdown(badges)
+    # Preserve confidence for saved domains if original had it
+    conf_map = {domain_name(d): domain_confidence(d) for d in raw_domains if isinstance(d, dict)}
+    new_domains = [
+        {"domain": n, "confidence": conf_map[n]} if n in conf_map else n
+        for n in new_domain_names
+    ]
     new_emotion = t2.selectbox("Emotion", EMOTIONS, index=EMOTIONS.index(tags["emotion"]) if tags.get("emotion") in EMOTIONS else 0)
     new_register = t3.selectbox("Register", REGISTERS, index=REGISTERS.index(tags["register"]) if tags.get("register") in REGISTERS else 0)
     new_type = t4.selectbox("Type", PHRASE_TYPES, index=PHRASE_TYPES.index(tags["type"]) if tags.get("type") in PHRASE_TYPES else 0)

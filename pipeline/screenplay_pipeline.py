@@ -23,7 +23,7 @@ except ImportError:
 from config import Config
 from db import reel_exists, save_reel
 from embedder import generate_embedding
-from enricher import enrich_reel
+from enricher import enrich_reel, cefr_override
 from extractor import extract_quotes
 from vocabulary import SUPPORTED_LANGUAGES
 
@@ -68,6 +68,10 @@ def _parse_screenplay_lines(raw_lines: list[tuple[float, str]]) -> list[str]:
     x0_values = sorted(x for x, _ in raw_lines)
     left_margin = x0_values[max(0, len(x0_values) // 20)]  # ~5th percentile
     char_threshold = left_margin + 100  # character names are well-indented
+    # Dialogue sits ~40% of the way between action and char names in WGA format.
+    # char_threshold-10 placed the threshold too close to char names, missing dialogue
+    # in all standard WGA PDFs where the gap between action and dialogue is ~70 pts.
+    dialogue_threshold = left_margin + (char_threshold - left_margin) * 0.4
 
     result: list[str] = []
     current_speaker: str | None = None
@@ -110,12 +114,18 @@ def _parse_screenplay_lines(raw_lines: list[tuple[float, str]]) -> list[str]:
             flush()
             # Strip annotations like (V.O.) (O.S.) (CONT'D)
             speaker = re.sub(r"\s*\(.*?\)\s*$", "", text).strip()
+            # Strip numeric suffixes: "CLACKER #1" → "CLACKER", "GUARD 2" → "GUARD"
+            speaker = re.sub(r"\s*#?\d+\s*$", "", speaker).strip()
             current_speaker = speaker
             continue
 
-        # Dialogue: indented (not at left margin), speaker is set
-        if current_speaker is not None and x0 > left_margin + 20:
-            current_dialogue.append(text)
+        # Dialogue: clearly indented beyond action/watermark zone
+        if current_speaker is not None and x0 > dialogue_threshold:
+            # Strip screenplay interrupted-speech dashes (e.g. "--Galliano" or "with--")
+            clean = re.sub(r'^--\s*', '', text)
+            clean = re.sub(r'\s*--$', '', clean).strip()
+            if clean:
+                current_dialogue.append(clean)
             continue
 
         # Action/description line — flush and wait for next character name
@@ -187,11 +197,18 @@ def process_screenplay(pdf_path: Path, args: argparse.Namespace, config: Config)
                 continue
 
             try:
-                enriched = enrich_reel(q, args.languages, source, config)
+                enriched = enrich_reel(q, args.languages, source, config, character_genders=args.character_genders_map)
             except Exception as e:
                 print(f"  [enrichment error] {quote_en[:60]}: {e}", file=sys.stderr)
                 errors += 1
                 continue
+
+            if enriched.get("adult") or enriched.get("tags", {}).get("register") == "vulgar":
+                enriched["status"] = "rejected"
+                print(f"  [auto-rejected adult/vulgar] {quote_en[:60]}")
+
+            tags = enriched.setdefault("tags", {})
+            tags["cefr"] = cefr_override(quote_en, tags.get("cefr", "B1"))
 
             if args.embedding:
                 try:
@@ -234,6 +251,12 @@ def main():
         help="Comma-separated character names (e.g. 'Axe,Wags,Chuck')",
     )
     parser.add_argument(
+        "--character-genders",
+        default=None,
+        dest="character_genders",
+        help="Character genders as Name:f/m pairs (e.g. 'Andy:f,Miranda:f,Nigel:m')",
+    )
+    parser.add_argument(
         "--embedding",
         action="store_true",
         help="Generate embeddings via OpenAI (off by default)",
@@ -250,6 +273,15 @@ def main():
     if invalid:
         print(f"Unsupported languages: {invalid}. Supported: {SUPPORTED_LANGUAGES}")
         sys.exit(1)
+
+    # Parse character genders: "Andy:f,Miranda:f,Nigel:m" → {"Andy": "female", "Miranda": "female", "Nigel": "male"}
+    args.character_genders_map = {}
+    if args.character_genders:
+        for pair in args.character_genders.split(","):
+            pair = pair.strip()
+            if ":" in pair:
+                name, gender = pair.split(":", 1)
+                args.character_genders_map[name.strip()] = "female" if gender.strip().lower() in ("f", "female") else "male"
 
     pdf_path = Path(args.file)
     if not pdf_path.exists():

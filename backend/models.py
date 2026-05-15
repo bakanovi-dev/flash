@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Any
 from enum import Enum
 
@@ -13,7 +13,6 @@ class EventType(str, Enum):
 class EventIn(BaseModel):
     card_id: str
     event: EventType
-    user_id: str = "1"
 
 
 class Expression(BaseModel):
@@ -59,3 +58,56 @@ class FeedResponse(BaseModel):
     items: list[ReelCard]
     next_cursor: float | None
     has_more: bool
+
+
+class SavesCardsResponse(BaseModel):
+    items: list[ReelCard]
+    total: int
+
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+
+class OtpSendRequest(BaseModel):
+    email: EmailStr
+    lang: str = 'en'
+
+
+class OtpVerifyRequest(BaseModel):
+    email: EmailStr
+    code: str
+
+
+class OtpVerifyResponse(BaseModel):
+    token: str
+    is_new_user: bool
+
+
+# ── User ─────────────────────────────────────────────────────────────────────
+
+class UserProfile(BaseModel):
+    id: str
+    email: str
+    name: str | None
+    avatar_url: str | None
+    language: str
+
+
+class UserUpdate(BaseModel):
+    name: str | None = None
+    language: str | None = None
+
+
+class UserDomainsResponse(BaseModel):
+    domains: list[str]
+
+
+class UserDomainsUpdate(BaseModel):
+    domains: list[str]
+
+
+class UserLevelsResponse(BaseModel):
+    levels: list[str]
+
+
+class UserLevelsUpdate(BaseModel):
+    levels: list[str]

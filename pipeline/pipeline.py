@@ -7,7 +7,7 @@ from pathlib import Path
 from config import Config
 from db import reel_exists, save_reel
 from embedder import generate_embedding
-from enricher import enrich_reel
+from enricher import enrich_reel, cefr_override
 from extractor import extract_quotes
 from srt_parser import parse_srt, parse_script
 from vocabulary import SUPPORTED_LANGUAGES
@@ -72,11 +72,18 @@ def process_file(srt_path: Path, args: argparse.Namespace, config: Config, index
                 q["speaker"] = None
 
             try:
-                enriched = enrich_reel(q, args.languages, source, config)
+                enriched = enrich_reel(q, args.languages, source, config, character_genders=args.character_genders_map)
             except Exception as e:
                 print(f"  [enrichment error] {quote_en[:60]}: {e}", file=sys.stderr)
                 errors += 1
                 continue
+
+            if enriched.get("adult") or enriched.get("tags", {}).get("register") == "vulgar":
+                enriched["status"] = "rejected"
+                print(f"  [auto-rejected adult/vulgar] {quote_en[:60]}")
+
+            tags = enriched.setdefault("tags", {})
+            tags["cefr"] = cefr_override(quote_en, tags.get("cefr", "B1"))
 
             if args.embedding:
                 try:
@@ -116,6 +123,12 @@ def main():
         help="Comma-separated list of character names (e.g. 'Sheldon,Leonard,Penny')",
     )
     parser.add_argument(
+        "--character-genders",
+        default=None,
+        dest="character_genders",
+        help="Character genders as Name:f/m pairs (e.g. 'Andy:f,Miranda:f,Nigel:m')",
+    )
+    parser.add_argument(
         "--embedding",
         action="store_true",
         help="Generate embeddings via OpenAI (Phase 2, off by default)",
@@ -127,6 +140,14 @@ def main():
     if invalid:
         print(f"Unsupported languages: {invalid}. Supported: {SUPPORTED_LANGUAGES}")
         sys.exit(1)
+
+    args.character_genders_map = {}
+    if args.character_genders:
+        for pair in args.character_genders.split(","):
+            pair = pair.strip()
+            if ":" in pair:
+                name, gender = pair.split(":", 1)
+                args.character_genders_map[name.strip()] = "female" if gender.strip().lower() in ("f", "female") else "male"
 
     config = Config()
 

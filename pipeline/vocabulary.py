@@ -25,12 +25,13 @@ DOMAINS = [
     "entertainment.humor", "entertainment.celebrity", "entertainment.standup",
     "entertainment.reality_tv",
     "adult.sexuality", "adult.erotica", "adult.relationships",
+    "other",
 ]
 
 EMOTIONS = ["joy", "anger", "sarcasm", "confidence", "fear", "nostalgia", "neutral"]
 REGISTERS = ["vulgar", "slang", "colloquial", "neutral", "formal", "archaic"]
 PHRASE_TYPES = ["idiom", "phrasal_verb", "collocation", "term", "aphorism", "proverb", "slang_word"]
-CEFR_LEVELS = ["A2", "B1", "B2", "C1", "C2"]
+CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]
 REGIONS = ["american", "british", "australian", "neutral"]
 ERAS = ["contemporary", "20th_century", "archaic"]
 
