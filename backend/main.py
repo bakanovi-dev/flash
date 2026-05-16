@@ -38,7 +38,8 @@ def _length_bucket(n: int) -> str:
 def _weight_keys(r: dict) -> list[str]:
     keys = []
     for domain in r.get("tags", {}).get("domains", []):
-        keys.append(f"domain:{domain}")
+        d = domain["domain"] if isinstance(domain, dict) else domain
+        keys.append(f"domain:{d}")
     emotion = r.get("tags", {}).get("emotion", "")
     if emotion: keys.append(f"emotion:{emotion}")
     register = r.get("tags", {}).get("register", "")
@@ -62,7 +63,8 @@ def _advance_cursors(db, user_id: str, reel: dict, now) -> None:
     rand = reel.get("rand")
     if rand is None:
         return
-    card_domains = set(reel.get("tags", {}).get("domains", []))
+    raw_domains = reel.get("tags", {}).get("domains", [])
+    card_domains = set(d["domain"] if isinstance(d, dict) else d for d in raw_domains)
     profile = db.user_profiles.find_one({"user_id": user_id}, {"selected_domains": 1}) or {}
     selected_set = set(profile.get("selected_domains", []))
     domains_to_update = card_domains & selected_set
@@ -128,7 +130,7 @@ def _to_card(r: dict, lang: str, saved: bool = False, liked: bool = False) -> Re
     return ReelCard(
         id=str(r["_id"]),
         rand=r.get("rand", 0.0),
-        quote_en=r.get("quote_en", ""),
+        quote_en=r.get(f"quote_{r.get('source_lang', 'en')}", r.get("quote_en", "")),
         context=loc.get("context", ""),
         quote_translated=loc.get("quote", ""),
         show=src.get("show", ""),
@@ -181,7 +183,7 @@ async def get_feed(
     any_wrapped = False
 
     if not selected:
-        domain_cursor = position_rand if resume and position_rand is not None else stored_cursors.get("__", {}).get("cursor", 0.0)
+        domain_cursor = stored_cursors.get("__", {}).get("cursor", 0.0)
         batch = list(db.reels.find(
             {**status_filter, "rand": {rand_op: domain_cursor}}
         ).sort("rand", 1).limit(fetch_limit))
@@ -198,10 +200,23 @@ async def get_feed(
         for r in batch:
             all_candidates[r["_id"]] = r
     else:
+        import re as _re
         for domain in selected:
-            domain_cursor = position_rand if resume and position_rand is not None else stored_cursors.get(_ck(domain), {}).get("cursor", 0.0)
+            # top-level domain (e.g. "adult") → match all subdomains ("adult.sexuality", etc.)
+            if "." in domain:
+                domain_filter = {
+                    "tags.domains": {
+                        "$elemMatch": {
+                            "domain": domain,
+                            "confidence": {"$gt": 80},
+                        }
+                    }
+                }
+            else:
+                domain_filter = {"tags.domains.domain": {"$regex": f"^{_re.escape(domain)}(\\..+)?$"}}
+            domain_cursor = stored_cursors.get(_ck(domain), {}).get("cursor", 0.0)
             batch = list(db.reels.find(
-                {**status_filter, "tags.domains": domain, "rand": {rand_op: domain_cursor}}
+                {**status_filter, **domain_filter, "rand": {rand_op: domain_cursor}}
             ).sort("rand", 1).limit(fetch_limit))
             if not batch:
                 any_wrapped = True
@@ -211,8 +226,14 @@ async def get_feed(
                     upsert=True,
                 )
                 batch = list(db.reels.find(
-                    {**status_filter, "tags.domains": domain, "rand": {"$gte": 0.0}}
+                    {**status_filter, **domain_filter, "rand": {"$gte": 0.0}}
                 ).sort("rand", 1).limit(fetch_limit))
+            elif len(batch) < fetch_limit:
+                existing_ids = {r["_id"] for r in batch}
+                extra = list(db.reels.find(
+                    {**status_filter, **domain_filter, "rand": {"$gte": 0.0}}
+                ).sort("rand", 1).limit(fetch_limit))
+                batch.extend(r for r in extra if r["_id"] not in existing_ids)
             for r in batch:
                 all_candidates[r["_id"]] = r
 
@@ -245,6 +266,19 @@ async def get_feed(
         next_cursor=next_cursor,
         has_more=has_more,
     )
+
+
+@app.post("/api/v1/feed/reset")
+async def reset_feed(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["user_id"]
+    db = get_db()
+    now = datetime.now(timezone.utc)
+    db.feed_state.update_one(
+        {"user_id": user_id},
+        {"$set": {"cursors": {}, "position_rand": None, "updated_at": now}, "$setOnInsert": {"created_at": now}},
+        upsert=True,
+    )
+    return {"ok": True}
 
 
 @app.get("/api/v1/feed/state")
@@ -447,7 +481,11 @@ async def get_domains():
     db = get_db()
     pipeline = [
         {"$unwind": "$tags.domains"},
-        {"$group": {"_id": "$tags.domains", "count": {"$sum": 1}}},
+        {"$match": {"$or": [
+            {"tags.domains.confidence": {"$exists": False}},
+            {"tags.domains.confidence": {"$gt": 80}},
+        ]}},
+        {"$group": {"_id": {"$ifNull": ["$tags.domains.domain", "$tags.domains"]}, "count": {"$sum": 1}}},
         {"$sort": {"_id": 1}},
     ]
     raw = list(db.reels.aggregate(pipeline))
@@ -455,6 +493,8 @@ async def get_domains():
     tree: dict[str, list[dict]] = {}
     for item in raw:
         d = item["_id"]
+        if not isinstance(d, str) or not d or d == "other":
+            continue
         parts = d.split(".", 1)
         domain = parts[0]
         subdomain = parts[1] if len(parts) > 1 else None

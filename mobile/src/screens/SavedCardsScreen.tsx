@@ -33,6 +33,8 @@ import { useTranslation } from 'react-i18next';
 import { QuoteCardFaces } from '../components/QuoteCardFaces';
 import { InterestsPicker } from '../components/InterestsPicker';
 import { LanguagePicker } from '../components/LanguagePicker';
+
+const LANG_FLAGS: Record<string, string> = { ru: '🇷🇺', fr: '🇫🇷', de: '🇩🇪', it: '🇮🇹', zh: '🇨🇳' };
 import { colors } from '../theme/colors';
 
 const BATCH_SIZE = 15;
@@ -43,11 +45,13 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 interface Props {
   token?: string;
   userName?: string | null;
+  lang?: string;
+  onLangChange?: (lang: string) => void;
   onNavigateHome: () => void;
   onLogout?: () => void;
 }
 
-export function SavedCardsScreen({ token, userName, onNavigateHome, onLogout }: Props) {
+export function SavedCardsScreen({ token, userName, lang = 'ru', onLangChange, onNavigateHome, onLogout }: Props) {
   const { t } = useTranslation();
   const [deck, setDeck] = useState<ReelCard[]>([]);
   const [index, setIndex] = useState(0);
@@ -75,6 +79,8 @@ export function SavedCardsScreen({ token, userName, onNavigateHome, onLogout }: 
   const flippedRef = useRef(false);
   const suppressFlipRef = useRef(false);
   const skipRef = useRef(0);
+  const langRef = useRef(lang);
+  langRef.current = lang;
 
   deckRef.current = deck;
   indexRef.current = index;
@@ -154,7 +160,7 @@ export function SavedCardsScreen({ token, userName, onNavigateHome, onLogout }: 
     fetchingRef.current = true;
     setLoading(true);
 
-    getSavedCards({ limit: BATCH_SIZE, skip: skipRef.current })
+    getSavedCards({ limit: BATCH_SIZE, skip: skipRef.current, lang: langRef.current })
       .then((data) => {
         fetchingRef.current = false;
         setLoading(false);
@@ -514,7 +520,7 @@ export function SavedCardsScreen({ token, userName, onNavigateHome, onLogout }: 
         <TouchableOpacity style={styles.langSection} onPress={() => { setMenuOpen(false); setShowLanguage(true); }} activeOpacity={0.7}>
           <Text style={styles.cefrLabel}>{t('menu.language')}</Text>
           <View style={styles.langRow}>
-            <Text style={styles.langFlag}>🇷🇺</Text>
+            <Text style={styles.langFlag}>{LANG_FLAGS[lang] ?? '🌐'}</Text>
             <Text style={styles.langArrow}>→</Text>
             <Text style={styles.langFlag}>🇬🇧</Text>
           </View>
@@ -557,7 +563,22 @@ export function SavedCardsScreen({ token, userName, onNavigateHome, onLogout }: 
       </Animated.View>
 
       {showInterests && <InterestsPicker onClose={() => setShowInterests(false)} />}
-      {showLanguage && <LanguagePicker onClose={() => setShowLanguage(false)} />}
+      {showLanguage && (
+        <LanguagePicker
+          nativeLang={lang}
+          onSaved={(newLang) => {
+            onLangChange?.(newLang);
+            skipRef.current = 0;
+            hasMoreRef.current = true;
+            deckRef.current = [];
+            setDeck([]);
+            setIndex(0);
+            setFlipped(false);
+            setTotal(null);
+          }}
+          onClose={() => setShowLanguage(false)}
+        />
+      )}
 
       {/* Burger */}
       {(!flipped || menuOpen) && (

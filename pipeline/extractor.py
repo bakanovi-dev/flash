@@ -3,9 +3,11 @@ from config import Config
 from llm_utils import call_llm, get_llm_client
 
 
-def extract_quotes(window: str, config: Config, show: str = "", characters: list[str] | None = None, has_labels: bool = False) -> list[dict]:
+def extract_quotes(window: str, config: Config, show: str = "", characters: list[str] | None = None, has_labels: bool = False, source_lang: str = "en") -> list[dict]:
+    from vocabulary import LANGUAGE_NAMES
     client = get_llm_client(config)
 
+    lang_name = LANGUAGE_NAMES.get(source_lang, "English")
     show_line = f'Show: "{show}"' if show else ""
     characters_line = f"Known characters: {', '.join(characters)}" if characters else ""
 
@@ -18,7 +20,7 @@ Use the label directly — set speaker to that name and speaker_certain=true."""
 2. {"Use the known characters list and your knowledge of " + show if characters else "Use your knowledge of " + (show or "the show")} to match the voice/style
 3. Set speaker_certain=true ONLY if the dialogue makes it unambiguous — wrong attribution is worse than null"""
 
-    prompt = f"""Analyze this English text and find quotes worth studying for language learners.
+    prompt = f"""Analyze this {lang_name} text and find quotes worth studying for {lang_name} language learners.
 
 {show_line}
 {characters_line}

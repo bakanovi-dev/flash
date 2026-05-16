@@ -4,7 +4,7 @@ from config import Config
 from llm_utils import call_llm, get_llm_client
 from vocabulary import (
     DOMAINS, EMOTIONS, REGISTERS, PHRASE_TYPES,
-    CEFR_LEVELS, REGIONS, ERAS, LANGUAGE_NAMES,
+    CEFR_LEVELS, REGIONS, ERAS, LANGUAGE_NAMES, SOURCE_LANGUAGES,
 )
 
 
@@ -37,6 +37,7 @@ def cefr_override(quote_en: str, llm_cefr: str) -> str:
 
 
 LANGUAGE_HINTS = {
+    "en": "Use natural idiomatic English. Vary sentence structure. Avoid overly formal phrasing.",
     "ru": "Use correct grammatical gender, case, and verb aspect. Determine character gender from your knowledge of the show — use the correct он/она pronouns and verb agreement accordingly.",
     "fr": "Distinguish tu/vous appropriately. Determine character gender from your knowledge of the show — apply correct elle/il pronouns and adjective agreement accordingly.",
     "de": "Apply correct case (Nominativ/Akkusativ/Dativ). Determine character gender from your knowledge of the show — use correct er/sie pronouns and adjective agreement accordingly.",
@@ -45,11 +46,13 @@ LANGUAGE_HINTS = {
 }
 
 
-def enrich_reel(quote_data: dict, languages: list[str], source: dict, config: Config, character_genders: dict | None = None) -> dict:
+def enrich_reel(quote_data: dict, languages: list[str], source: dict, config: Config, character_genders: dict | None = None, source_lang: str = "en") -> dict:
     """Enrich a bare quote into a full reel document (without _id, source, status, embedding)."""
     client = get_llm_client(config)
+    lang_name = LANGUAGE_NAMES.get(source_lang, "English")
+    quote_field = f"quote_{source_lang}"
 
-    quote_en = quote_data["quote_en"]
+    quote_en = quote_data.get(quote_field) or quote_data.get("quote_en", "")
     context_hint = quote_data.get("context_hint", "")
     speaker = quote_data.get("speaker")
 
@@ -93,7 +96,7 @@ def enrich_reel(quote_data: dict, languages: list[str], source: dict, config: Co
     else:
         gender_section = ""
 
-    prompt = f"""You are an English language learning content creator. Create educational flashcard content for this quote.
+    prompt = f"""You are a {lang_name} language learning content creator. Create educational flashcard content for this quote.
 
 Quote: "{quote_en}"
 Speaker: {speaker if speaker else "unknown — infer from dialogue style and your knowledge of the show"}
@@ -141,9 +144,9 @@ Return a JSON object with this exact structure:
 
 Rules:
 - locales[lang].context: write ONLY in the target language. Do NOT translate or paraphrase the English quote — describe ONLY the situation: who is speaking, where, why, what mood. Character names should be adapted naturally for the target language (e.g. transliterate into Chinese or Russian script). Do NOT write any English words inside the target-language text — this includes verbs (WRONG: "Энди confronts Найджела", RIGHT: "Энди вступает в конфронтацию с Найджелом"), nouns, adjectives, and no parenthetical English originals like "(Andy)" or "(Clacker)".
-- expressions[].phrase: MUST be a verbatim substring of the English quote above. English only. No translations, no invented phrases.
+- expressions[].phrase: MUST be a verbatim substring of the {lang_name} quote above. {lang_name} only. No translations, no invented phrases.
 - expressions: idioms, phrasal verbs, collocations, terms ONLY — not single words. Include 1–3. Make explanations educational and engaging. Include etymology when known.
-- words[].word: MUST appear verbatim in the English quote above. If the quote has no non-trivial words, return an empty array.
+- words[].word: MUST appear verbatim in the {lang_name} quote above. If the quote has no non-trivial words, return an empty array.
 - words: include ALL non-trivial words (B1+) from the quote NOT already covered in expressions. No upper limit.
 - literal translation: word-for-word, often surprising or funny — show how the phrase looks when translated blindly.
 - explanation: 2–3 sentences. Include etymology, historical origin, cultural context. Make it fascinating.

@@ -36,6 +36,8 @@ import { useTranslation } from 'react-i18next';
 import { QuoteCardFaces } from '../components/QuoteCardFaces';
 import { InterestsPicker } from '../components/InterestsPicker';
 import { LanguagePicker } from '../components/LanguagePicker';
+
+const LANG_FLAGS: Record<string, string> = { ru: '🇷🇺', fr: '🇫🇷', de: '🇩🇪', it: '🇮🇹', zh: '🇨🇳' };
 import { colors } from '../theme/colors';
 
 const BATCH_SIZE = 15;
@@ -46,11 +48,13 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 interface Props {
   token?: string;
   userName?: string | null;
+  lang?: string;
+  onLangChange?: (lang: string) => void;
   onLogout?: () => void;
   onNavigateSaved?: () => void;
 }
 
-export function ReelCardsScreen({ token, userName, onLogout, onNavigateSaved }: Props) {
+export function ReelCardsScreen({ token, userName, lang = 'ru', onLangChange, onLogout, onNavigateSaved }: Props) {
   const { t } = useTranslation();
   const [deck, setDeck] = useState<ReelCard[]>([]);
   const [index, setIndex] = useState(0);
@@ -70,6 +74,8 @@ export function ReelCardsScreen({ token, userName, onLogout, onNavigateSaved }: 
   const deckRef = useRef<ReelCard[]>([]);
   const indexRef = useRef(0);
   const resumeRef = useRef(false);
+  const langRef = useRef(lang);
+  langRef.current = lang;
   const hasMoreRef = useRef(true);
   const fetchingRef = useRef(false);
   const transRef = useRef(false);
@@ -134,6 +140,7 @@ export function ReelCardsScreen({ token, userName, onLogout, onNavigateSaved }: 
     getFeed({
       resume: resumeRef.current,
       limit: BATCH_SIZE,
+      lang: langRef.current,
     })
       .then((data) => {
         fetchingRef.current = false;
@@ -208,6 +215,18 @@ export function ReelCardsScreen({ token, userName, onLogout, onNavigateSaved }: 
       fetchBatch();
     }
   }, [index, deck.length]);
+
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    resumeRef.current = false;
+    hasMoreRef.current = true;
+    deckRef.current = [];
+    setDeck([]);
+    setIndex(0);
+    setFlipped(false);
+    fetchBatch();
+  }, [lang]);
 
   // ── Navigation ───────────────────────────────────────────────────────────
 
@@ -422,15 +441,36 @@ export function ReelCardsScreen({ token, userName, onLogout, onNavigateSaved }: 
 
   if (!card) {
     return (
-      <View style={styles.container}>
+      <View style={styles.emptyContainer}>
         <StatusBar barStyle="dark-content" />
         <View style={styles.center}>
           {loading ? (
             <ActivityIndicator color={colors.muted} />
           ) : (
-            <Text style={styles.emptyText}>{t('feed.empty')}</Text>
+            <>
+              <Text style={styles.emptyText}>{t('feed.empty')}</Text>
+              <Text style={styles.emptyHint}>{t('feed.empty.hint')}</Text>
+              <TouchableOpacity style={styles.emptyAction} onPress={() => setShowInterests(true)}>
+                <Text style={styles.emptyActionText}>{t('feed.empty.action')}</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
+        {showInterests && (
+          <InterestsPicker
+            onClose={() => setShowInterests(false)}
+            onSaved={() => {
+              setShowInterests(false);
+              resumeRef.current = false;
+              hasMoreRef.current = true;
+              deckRef.current = [];
+              setDeck([]);
+              setIndex(0);
+              setFlipped(false);
+              fetchBatch();
+            }}
+          />
+        )}
       </View>
     );
   }
@@ -552,7 +592,7 @@ export function ReelCardsScreen({ token, userName, onLogout, onNavigateSaved }: 
         <TouchableOpacity style={styles.langSection} onPress={() => { setMenuOpen(false); setShowLanguage(true); }} activeOpacity={0.7}>
           <Text style={styles.cefrLabel}>{t('menu.language')}</Text>
           <View style={styles.langRow}>
-            <Text style={styles.langFlag}>🇷🇺</Text>
+            <Text style={styles.langFlag}>{LANG_FLAGS[lang] ?? '🌐'}</Text>
             <Text style={styles.langArrow}>→</Text>
             <Text style={styles.langFlag}>🇬🇧</Text>
           </View>
@@ -609,7 +649,13 @@ export function ReelCardsScreen({ token, userName, onLogout, onNavigateSaved }: 
           }}
         />
       )}
-      {showLanguage && <LanguagePicker onClose={() => setShowLanguage(false)} />}
+      {showLanguage && (
+        <LanguagePicker
+          nativeLang={lang}
+          onSaved={(newLang) => onLangChange?.(newLang)}
+          onClose={() => setShowLanguage(false)}
+        />
+      )}
 
       {/* Burger button — rendered AFTER menu so it sits on top */}
       {(!flipped || menuOpen) && (
@@ -636,6 +682,10 @@ export function ReelCardsScreen({ token, userName, onLogout, onNavigateSaved }: 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#111' },
+  emptyContainer: { flex: 1, backgroundColor: '#f9f9f9' },
+  emptyHint: { fontSize: 14, color: '#888', marginTop: 8, textAlign: 'center' },
+  emptyAction: { marginTop: 24, paddingHorizontal: 28, paddingVertical: 12, backgroundColor: colors.accent, borderRadius: 24 },
+  emptyActionText: { fontSize: 15, fontWeight: '600', color: '#fff' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyText: { fontSize: 15, color: colors.muted },
 

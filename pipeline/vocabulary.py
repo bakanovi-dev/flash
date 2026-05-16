@@ -35,9 +35,11 @@ CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]
 REGIONS = ["american", "british", "australian", "neutral"]
 ERAS = ["contemporary", "20th_century", "archaic"]
 
-SUPPORTED_LANGUAGES = ["ru", "fr", "de", "it", "zh"]
+SOURCE_LANGUAGES = ["en", "it", "fr", "de", "ru", "zh"]
+SUPPORTED_LANGUAGES = ["ru", "fr", "de", "it", "zh", "en"]
 
 LANGUAGE_NAMES = {
+    "en": "English",
     "ru": "Russian",
     "fr": "French",
     "de": "German",

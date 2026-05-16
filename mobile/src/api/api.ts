@@ -108,8 +108,9 @@ export interface FeedResponse {
 export async function getFeed(params: {
   resume?: boolean;
   limit?: number;
+  lang?: string;
 }): Promise<FeedResponse> {
-  const p = new URLSearchParams({ limit: String(params.limit ?? 15), lang: LANG });
+  const p = new URLSearchParams({ limit: String(params.limit ?? 15), lang: params.lang ?? LANG });
   if (params.resume) p.set('resume', 'true');
   return apiFetch(`/api/v1/feed?${p}`);
 }

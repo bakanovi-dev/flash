@@ -25,7 +25,7 @@ from db import reel_exists, save_reel
 from embedder import generate_embedding
 from enricher import enrich_reel, cefr_override
 from extractor import extract_quotes
-from vocabulary import SUPPORTED_LANGUAGES
+from vocabulary import SUPPORTED_LANGUAGES, SOURCE_LANGUAGES
 
 WINDOW_SIZE = 20
 STEP = 15
@@ -178,7 +178,8 @@ def process_screenplay(pdf_path: Path, args: argparse.Namespace, config: Config)
                 window, config,
                 show=args.source,
                 characters=args.characters,
-                has_labels=True,  # speaker names are explicit in NAME: dialogue format
+                has_labels=True,
+                source_lang=args.source_lang,
             )
             print(f"{len(quotes)} quote(s)")
         except Exception as e:
@@ -188,42 +189,46 @@ def process_screenplay(pdf_path: Path, args: argparse.Namespace, config: Config)
             continue
 
         for q in quotes:
-            quote_en = q.get("quote_en", "").strip()
-            if not quote_en:
+            quote_field = f"quote_{args.source_lang}"
+            quote = q.get(quote_field) or q.get("quote_en", "")
+            quote = quote.strip()
+            if not quote:
                 continue
 
-            if reel_exists(quote_en, config):
+            if reel_exists(quote, config):
                 skipped += 1
                 continue
 
             try:
-                enriched = enrich_reel(q, args.languages, source, config, character_genders=args.character_genders_map)
+                enriched = enrich_reel(q, args.languages, source, config, character_genders=args.character_genders_map, source_lang=args.source_lang)
             except Exception as e:
-                print(f"  [enrichment error] {quote_en[:60]}: {e}", file=sys.stderr)
+                print(f"  [enrichment error] {quote[:60]}: {e}", file=sys.stderr)
                 errors += 1
                 continue
 
             if enriched.get("adult") or enriched.get("tags", {}).get("register") == "vulgar":
                 enriched["status"] = "rejected"
-                print(f"  [auto-rejected adult/vulgar] {quote_en[:60]}")
+                print(f"  [auto-rejected adult/vulgar] {quote[:60]}")
 
             tags = enriched.setdefault("tags", {})
-            tags["cefr"] = cefr_override(quote_en, tags.get("cefr", "B1"))
+            tags["cefr"] = cefr_override(quote, tags.get("cefr", "B1"))
 
             if args.embedding:
                 try:
                     enriched["embedding"] = generate_embedding(
-                        {"quote_en": quote_en, **enriched}, config
+                        {quote_field: quote, **enriched}, config
                     )
                 except Exception as e:
                     print(f"  [embedding error] {e}", file=sys.stderr)
 
+            enriched[quote_field] = quote
+            enriched["source_lang"] = args.source_lang
             enriched["speaker"] = q.get("speaker")
-            enriched["speaker_certain"] = True  # screenplay format = always certain
-            save_reel(enriched, source, quote_en, config)
+            enriched["speaker_certain"] = True
+            save_reel(enriched, source, quote, config)
             saved += 1
             speaker_label = q.get("speaker") or "?"
-            print(f"  + [{speaker_label}] {quote_en[:75]}")
+            print(f"  + [{speaker_label}] {quote[:75]}")
 
     print(f"  saved={saved}  skipped(dup)={skipped}  errors={errors}")
 
@@ -265,6 +270,13 @@ def main():
         "--parse-only",
         action="store_true",
         help="Only parse and print dialogue lines — do not run extraction",
+    )
+    parser.add_argument(
+        "--source-lang",
+        default="en",
+        dest="source_lang",
+        choices=SOURCE_LANGUAGES,
+        help="Source language of the content (default: en)",
     )
     args = parser.parse_args()
 

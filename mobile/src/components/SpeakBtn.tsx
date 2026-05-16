@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TouchableOpacity } from 'react-native-gesture-handler';
+import { Pressable } from 'react-native';
 import Svg, { Polygon, Path, Rect } from 'react-native-svg';
 import * as Speech from 'expo-speech';
 import { colors } from '../theme/colors';
@@ -27,7 +27,7 @@ export function SpeakBtn({ text, onPressIn }: { text: string; onPressIn?: () => 
   const color = speaking ? colors.accent : colors.muted;
 
   return (
-    <TouchableOpacity onPressIn={handlePressIn} style={{ padding: 4, alignSelf: 'flex-start' }}>
+    <Pressable onPressIn={handlePressIn} style={{ alignSelf: 'flex-start' }} hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}>
       {speaking ? (
         <Svg width="18" height="18" viewBox="0 0 24 24" fill={color}>
           <Rect x="5" y="5" width="14" height="14" rx="2" />
@@ -39,6 +39,6 @@ export function SpeakBtn({ text, onPressIn }: { text: string; onPressIn?: () => 
           <Path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
         </Svg>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }

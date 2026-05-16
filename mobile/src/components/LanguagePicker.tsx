@@ -17,42 +17,81 @@ interface Language {
   flag: string;
 }
 
-const LANGUAGES: Language[] = [
+// Languages that have translations in the DB
+export const NATIVE_LANGUAGES: Language[] = [
   { code: 'ru', flag: '🇷🇺' },
-  { code: 'en', flag: '🇬🇧' },
-  { code: 'de', flag: '🇩🇪' },
   { code: 'fr', flag: '🇫🇷' },
-  { code: 'es', flag: '🇪🇸' },
+  { code: 'de', flag: '🇩🇪' },
   { code: 'it', flag: '🇮🇹' },
   { code: 'zh', flag: '🇨🇳' },
-  { code: 'ja', flag: '🇯🇵' },
-  { code: 'ko', flag: '🇰🇷' },
-  { code: 'pt', flag: '🇵🇹' },
-  { code: 'ar', flag: '🇸🇦' },
-  { code: 'tr', flag: '🇹🇷' },
-  { code: 'uk', flag: '🇺🇦' },
-  { code: 'pl', flag: '🇵🇱' },
+];
+
+// Languages available as learning targets (currently only English)
+const TARGET_LANGUAGES: Language[] = [
+  { code: 'en', flag: '🇬🇧' },
 ];
 
 type Slot = 'native' | 'target';
 
 interface Props {
+  nativeLang: string;
+  onSaved: (nativeLang: string) => void;
   onClose: () => void;
 }
 
-export function LanguagePicker({ onClose }: Props) {
+export function LanguagePicker({ nativeLang, onSaved, onClose }: Props) {
   const { t } = useTranslation();
-  const [nativeLang, setNativeLang] = useState('ru');
-  const [targetLang, setTargetLang] = useState('en');
+  const [selectedNative, setSelectedNative] = useState(nativeLang);
   const [openSlot, setOpenSlot] = useState<Slot | null>(null);
 
-  const native = LANGUAGES.find(l => l.code === nativeLang)!;
-  const target = LANGUAGES.find(l => l.code === targetLang)!;
+  const native = NATIVE_LANGUAGES.find(l => l.code === selectedNative) ?? NATIVE_LANGUAGES[0];
+  const target = TARGET_LANGUAGES[0];
 
-  const selectLang = (slot: Slot, code: string) => {
-    if (slot === 'native') setNativeLang(code);
-    else setTargetLang(code);
-    setOpenSlot(null);
+  const renderSlot = (slot: Slot) => {
+    const isNative = slot === 'native';
+    const lang = isNative ? native : target;
+    const languages = isNative ? NATIVE_LANGUAGES : TARGET_LANGUAGES;
+    const isOpen = openSlot === slot;
+    const label = isNative ? t('langpicker.know') : t('langpicker.learn');
+
+    return (
+      <View key={slot} style={s.group}>
+        <Text style={s.sectionLabel}>{label}</Text>
+        <TouchableOpacity
+          style={[s.dropdown, isOpen && s.dropdownOpen]}
+          onPress={() => isNative && setOpenSlot(isOpen ? null : slot)}
+          activeOpacity={isNative ? 0.7 : 1}
+        >
+          <Text style={s.flag}>{lang.flag}</Text>
+          <Text style={s.langText}>{t(`lang.${lang.code}`)}</Text>
+          {isNative && <Text style={s.arrow}>{isOpen ? '▲' : '▼'}</Text>}
+        </TouchableOpacity>
+        {isOpen && (
+          <View style={s.list}>
+            {languages.map(l => {
+              const selected = l.code === selectedNative;
+              return (
+                <TouchableOpacity
+                  key={l.code}
+                  style={s.listItem}
+                  onPress={() => {
+                    setSelectedNative(l.code);
+                    setOpenSlot(null);
+                    onSaved(l.code);
+                    onClose();
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={s.flag}>{l.flag}</Text>
+                  <Text style={[s.langText, selected && s.textActive]}>{t(`lang.${l.code}`)}</Text>
+                  {selected && <Text style={s.checkmark}>✓</Text>}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+      </View>
+    );
   };
 
   return (
@@ -71,49 +110,10 @@ export function LanguagePicker({ onClose }: Props) {
         </View>
 
         <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-          {(['native', 'target'] as Slot[]).map(slot => {
-            const lang = slot === 'native' ? native : target;
-            const isOpen = openSlot === slot;
-            const label = slot === 'native' ? t('langpicker.know') : t('langpicker.learn');
-            return (
-              <View key={slot} style={s.group}>
-                <Text style={s.sectionLabel}>{label}</Text>
-                <TouchableOpacity
-                  style={[s.dropdown, isOpen && s.dropdownOpen]}
-                  onPress={() => setOpenSlot(isOpen ? null : slot)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={s.flag}>{lang.flag}</Text>
-                  <Text style={s.langText}>{t(`lang.${lang.code}`)}</Text>
-                  <Text style={s.arrow}>{isOpen ? '▲' : '▼'}</Text>
-                </TouchableOpacity>
-                {isOpen && (
-                  <View style={s.list}>
-                    {LANGUAGES.map(l => {
-                      const selected = l.code === (slot === 'native' ? nativeLang : targetLang);
-                      return (
-                        <TouchableOpacity
-                          key={l.code}
-                          style={s.listItem}
-                          onPress={() => selectLang(slot, l.code)}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={s.flag}>{l.flag}</Text>
-                          <Text style={[s.langText, selected && s.textActive]}>{t(`lang.${l.code}`)}</Text>
-                          {selected && <Text style={s.checkmark}>✓</Text>}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
-            );
-          })}
+          {renderSlot('native')}
+          {renderSlot('target')}
         </ScrollView>
 
-        <TouchableOpacity style={s.doneBtn} onPress={onClose}>
-          <Text style={s.doneBtnText}>{t('langpicker.done')}</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -148,8 +148,8 @@ const s = StyleSheet.create({
     fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: '600',
     letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10,
   },
-  textActive: { color: '#fff', fontWeight: '600' },
-  checkmark:  { marginLeft: 'auto', color: ACCENT, fontSize: 14, fontWeight: '700' },
+  textActive:  { color: '#fff', fontWeight: '600' },
+  checkmark:   { marginLeft: 'auto', color: ACCENT, fontSize: 14, fontWeight: '700' },
 
   group:    { marginBottom: 20 },
   dropdown: {

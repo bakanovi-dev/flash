@@ -10,6 +10,9 @@ import { LoginScreen } from './src/screens/LoginScreen';
 import { OtpScreen } from './src/screens/OtpScreen';
 import { NameScreen } from './src/screens/NameScreen';
 import { setAuthToken, getMe } from './src/api/api';
+
+const LANG_KEY = 'user_lang';
+const DEFAULT_LANG = 'ru';
 import i18n from './src/i18n';
 
 type Screen = 'loading' | 'login' | 'otp' | 'name' | 'cards' | 'saved';
@@ -19,6 +22,12 @@ export default function App() {
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
   const [userName, setUserName] = useState<string | null>(null);
+  const [lang, setLang] = useState(DEFAULT_LANG);
+
+  const handleLangChange = async (newLang: string) => {
+    setLang(newLang);
+    await AsyncStorage.setItem(LANG_KEY, newLang);
+  };
 
   const locales = useLocales();
   useEffect(() => {
@@ -37,8 +46,11 @@ export default function App() {
   };
 
   useEffect(() => {
-    AsyncStorage.getItem('auth_token')
-      .then(async (t) => {
+    Promise.all([
+      AsyncStorage.getItem('auth_token'),
+      AsyncStorage.getItem(LANG_KEY),
+    ]).then(async ([t, savedLang]) => {
+        if (savedLang) setLang(savedLang);
         if (t) {
           setAuthToken(t);
           await fetchUserName();
@@ -96,6 +108,8 @@ export default function App() {
           <ReelCardsScreen
             token={token}
             userName={userName}
+            lang={lang}
+            onLangChange={handleLangChange}
             onLogout={handleLogout}
             onNavigateSaved={() => setScreen('saved')}
           />
@@ -104,6 +118,8 @@ export default function App() {
           <SavedCardsScreen
             token={token}
             userName={userName}
+            lang={lang}
+            onLangChange={handleLangChange}
             onNavigateHome={() => setScreen('cards')}
             onLogout={handleLogout}
           />

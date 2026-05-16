@@ -27,6 +27,8 @@
     "menu.logout": "Выйти",
 
     "feed.empty": "Нет карточек",
+    "feed.empty.hint": "Попробуйте выбрать другую рубрику",
+    "feed.empty.action": "Выбрать рубрику",
 
     "saved.empty": "Нет сохранённых карточек",
     "saved.counter": "Сохранённые {{index}}/{{total}}",
@@ -190,6 +192,8 @@
     "menu.logout": "Sign out",
 
     "feed.empty": "No cards",
+    "feed.empty.hint": "Try selecting a different category",
+    "feed.empty.action": "Choose category",
 
     "saved.empty": "No saved cards",
     "saved.counter": "Saved {{index}}/{{total}}",
